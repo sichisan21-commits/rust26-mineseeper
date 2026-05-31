@@ -43,8 +43,9 @@ impl Panel {
     //------------------------------
     // ユーザのフラグを立てる
     //------------------------------
-    pub fn set_userflag(&mut self) {
-        self.user_flag = (self.user_flag + 1) % 3;
+    pub fn set_userflag(&mut self, flg: i32) {
+        self.user_flag = flg;
+//        self.user_flag = (self.user_flag + 1) % 3;
     }
 
     pub fn setflg(&mut self, flg: i32) {
@@ -56,6 +57,13 @@ impl Panel {
     //------------------------------
     pub fn getstat(&mut self) -> i32 {
         self.stat
+    }
+
+    //------------------------------
+    // 周囲の爆弾数を返却する
+    //------------------------------
+    pub fn get_around_num(&mut self) -> i32 {
+        self.around_num
     }
 
     //------------------------------

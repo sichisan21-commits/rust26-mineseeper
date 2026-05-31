@@ -166,7 +166,7 @@ impl GameMain {
         // フラグ処理を行う
         let tblpos = get_index(self.cursol_x, self.cursol_y, self.width, self.height);
         if tblpos != -1 {
-            self.table[tblpos as usize].set_userflag();
+            self.table[tblpos as usize].set_userflag(1);
         }
     }
 
@@ -192,6 +192,13 @@ impl GameMain {
 
         // カーソル位置及び隣接位置を開く
         self.openchain(true, self.cursol_x, self.cursol_y);
+
+        // 自動的に旗を立てる
+        for x in 0..self.width {
+            for y in 0..self.height {
+                self.auto_flag(x, y);
+            }
+        }
     }
 
     //------------------------------
@@ -217,9 +224,6 @@ impl GameMain {
 
         // クリック位置を開く
         self.table[tblpos].open();
-        if self.table[tblpos].get_around_num() > 0 {
-            return;
-        }
 
         // 周囲をチェックし開いていく
         for y in -1..2 {
@@ -232,16 +236,57 @@ impl GameMain {
                 // 盤面の横位置、縦位置、テーブルインデックスを求める
                 let pos_x = cursol_x + x as i32;
                 let pos_y = cursol_y + y as i32;
-
+                let index = get_index(pos_x, pos_y, self.width, self.height);
                 // 盤面外ならスキップ
-                if pos_x < 0 || pos_x >= self.width ||
-                   pos_y < 0 || pos_y >= self.height {
+                if index == -1 {
                     continue;
                 }
 
                 // 連鎖的に開く
-                self.openchain(false, pos_x, pos_y);
+                if self.table[tblpos].get_around_num() == 0 {
+                   self.openchain(false, pos_x, pos_y);
+                }
             }
+        }
+    }
+
+    //------------------------------
+    // 自動で旗を立てる
+    //------------------------------
+    fn auto_flag (&mut self, cursol_x: i32, cursol_y:i32) {
+        // 周囲に爆弾なしの場合はないもしない
+        let tblpos = get_index(cursol_x, cursol_y, self.width, self.height);
+        if tblpos == -1 || self.table[tblpos as usize].get_around_num() == 0 {
+            return;
+        }
+
+        // 周囲の開いていないパネルを数える
+        let mut close_list:Vec<i32> = Vec::new();
+        for y in -1..2 {
+            for x in -1..2 {
+                // 盤面の横位置、縦位置、テーブルインデックスを求める
+                let pos_x = cursol_x + x as i32;
+                let pos_y = cursol_y + y as i32;
+                let index = get_index(pos_x, pos_y, self.width, self.height);
+                // 盤面外ならスキップ
+                if index == -1 {
+                    continue;
+                }
+                // 周囲の閉じているパネルのインデックスを保持
+                if self.table[index as usize].getstat() == 0 {
+                    close_list.push(index);
+                }
+            }
+        }
+
+        // 周囲の開いてないパネル数が一致しなければ終了
+        if self.table[tblpos as usize].get_around_num() != close_list.len() as i32 {
+            return;
+        }
+
+        // 周囲の未開封マスが全て爆弾と判断できた
+        for index in close_list {
+            self.table[index as usize].set_userflag(1);
         }
     }
 

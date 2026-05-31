@@ -24,7 +24,7 @@ pub const PANEL_COL_OPEN: Color = Color::from_rgba(220, 220, 220, 255);
 async fn main() {
     rand::srand(miniquad::date::now() as u64);
 
-    let width = 10;
+    let width = 20;
     let height = 20;
     let bom_num = width * height * 20 /100;
 
