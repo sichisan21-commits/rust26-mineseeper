@@ -1,4 +1,9 @@
 use macroquad::prelude::*;
+use crate::{PANEL_WIDTH,PANEL_HEIGHT,WALL_LEFT,WALL_TOP};
+
+//--- 色 ---
+// パネル
+use crate::PANEL_COL_CLOSE;
 
 // 盤面のオブジェクト
 pub struct Panel {
@@ -26,31 +31,34 @@ impl Panel {
         }        
     }
 
+    pub fn open(&mut self) {
+        self.stat = 1;
+    }
+    pub fn close(&mut self) {
+        self.stat = 0;
+    }
+
+    //------------------------------
+    // 自分自身を描画
+    //------------------------------
     pub fn draw_panel(&self, cursol_x: i32, cursol_y: i32) {
-        let left = self.pos_x as f32 * 20.0;
-        let top = self.pos_y as f32 * 20.0;
-        draw_rectangle(left,top,10.0,10.0, LIGHTGRAY);
-    }
-    //------------------------------
-    // 描画情報の取得
-    //------------------------------
-    pub fn get_view_txt(&self, cursol_x: i32, cursol_y: i32) -> String {
-        // パネルが未開封の場合
-        if self.stat == 0 {
-            // かつカーソル位置と一致している場合
-            if self.pos_x == cursol_x && self.pos_y == cursol_y {
-                return String::from("\x1b[7m\x1b[31m　\x1b[0m")
-            } else {
-                return String::from("\x1b[7m　\x1b[0m")
-            }
+        let left = self.pos_x as f32 * PANEL_WIDTH + WALL_LEFT;
+        let top = self.pos_y as f32 * PANEL_HEIGHT + WALL_TOP;
+        draw_rectangle(left,top,
+            PANEL_WIDTH, PANEL_HEIGHT,
+            BLACK);
+
+        let mut panelcolor = PANEL_COL_CLOSE;
+        if self.stat == 1 {
+            panelcolor = Color::from_rgba(255, 255, 128, 255);
         }
- 
-        // パネルが開封済の場合
-        // かつカーソル位置と一致している場合
         if self.pos_x == cursol_x && self.pos_y == cursol_y {
-            return String::from("\x1b[31m■\x1b[0m")
-        } else {
-            return String::from("　")
+            panelcolor = Color::from_rgba(255, 128, 128, 255);
         }
-    }
+        draw_rectangle(left,top,
+            PANEL_WIDTH - 2.0, PANEL_HEIGHT - 2.0,
+            panelcolor);
+        let text = format!("{}", self.stat);
+        draw_text(text, left + 20.0, top + 20.0, 20.0, RED);
+        }
 }
