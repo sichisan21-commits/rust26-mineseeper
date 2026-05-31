@@ -217,6 +217,9 @@ impl GameMain {
 
         // クリック位置を開く
         self.table[tblpos].open();
+        if self.table[tblpos].get_around_num() > 0 {
+            return;
+        }
 
         // 周囲をチェックし開いていく
         for y in -1..2 {
