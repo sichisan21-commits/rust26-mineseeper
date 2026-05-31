@@ -1,10 +1,11 @@
-use crate::panel::Panel;
 use macroquad::prelude::*;
+use crate::panel::Panel;
 use crate::{PANEL_WIDTH,PANEL_HEIGHT,WALL_LEFT,WALL_TOP};
 use crate::LAYOUT_COLOR;
 
 // ゲームメインデータ
 pub struct GameMain {
+    stat: i32,                              // 0:初期画面/1:開始待ち/2:プレイ中
     width: i32,                             // 盤面の幅
     height: i32,                            // 盤面の高さ
     bom_num: i32,                           // 爆弾の数
@@ -24,7 +25,8 @@ impl GameMain {
     //------------------------------
     pub fn new () -> GameMain {
         GameMain {
-            width: 16,
+            stat: 0,
+            width: 10,
             height: 10,
             bom_num: 0,
             table: Vec::new(),
@@ -50,7 +52,6 @@ impl GameMain {
     pub fn initial_game(&mut self) {
         // 盤面を初期化する
         self.table.clear();
-        let size = (self.width * self.height) as usize;
         for y in 0..self.height {
             for x in 0..self.width {
                 self.table.push(Panel::new(x, y));
@@ -60,6 +61,58 @@ impl GameMain {
         // カーソル位置を初期化
         self.cursol_x = 0;
         self.cursol_y = 0;
+
+        // クリック待ち
+        self.stat = 1;
+    }
+
+    //------------------------------
+    // 爆弾を配置する
+    //------------------------------
+    pub fn setting_bom(&mut self) {
+        for x in 0..self.bom_num{
+            loop {
+                // 爆弾位置をランダム生成する
+                let land_x = rand::gen_range(0, self.width);
+                let land_y = rand::gen_range(0, self.height);
+
+                // カーソル位置と一致する位置には配置しない
+                if land_x == self.cursol_x && land_y == self.cursol_y {
+                    continue;
+                }
+
+                // 爆弾を配置
+                if self.bomon(land_x, land_y) {
+                    break;
+                }
+            }
+        }
+    }
+
+    //------------------------------
+    // 指定のマスに爆弾を置く
+    //------------------------------
+    fn bomon(&mut self, cursol_x:i32, cursol_y:i32) -> bool {
+        // 座標不正または配置済みの場合 false
+        let tblpos = get_index(cursol_x, cursol_y, self.width, self.height);
+        if tblpos == -1 || self.table[tblpos as usize].is_bom() {
+            return false;
+        }
+
+        // 該当パネルに爆弾を置き
+        // 周囲のパネルのカウントを増やす
+        self.table[tblpos as usize].bomon();
+        for y in -1..2 {
+            for x in -1..2 {
+                let tblpos = get_index(
+                    cursol_x + x, cursol_y + y,
+                    self.width, self.height);
+                if tblpos != -1 {
+                    self.table[tblpos as usize].numup();
+                }
+            } 
+        }
+        true
     }
 
     //------------------------------
@@ -73,7 +126,7 @@ impl GameMain {
             LAYOUT_COLOR);
 
         for panel in &self.table {
-            panel.draw_panel(self.cursol_x, self.cursol_y);
+            panel.draw_panel();
         }
     }
 
@@ -92,15 +145,113 @@ impl GameMain {
         self.cursol_x = cursol_x.clamp(0, self.width - 1);
         self.cursol_y = cursol_y.clamp(0, self.height - 1);
         self.on_table = self.cursol_x == cursol_x && self.cursol_y == cursol_y;
+        self.set_around();
 
+        // マウスクリック判定（左）
+        self.click_tbl_left();
+
+        // マウスクリック判定（右）
+        self.click_tbl_right();
+    }
+
+    //------------------------------
+    // 盤面左クリック処理
+    //------------------------------
+    fn click_tbl_right (&mut self) {
+        // マウス右クリックされていない、マウスが盤面上ではない、なら何もしない
+        if !is_mouse_button_pressed(MouseButton::Right) || !self.on_table {
+            return
+        }
+
+        // フラグ処理を行う
+        let tblpos = get_index(self.cursol_x, self.cursol_y, self.width, self.height);
+        if tblpos != -1 {
+            self.table[tblpos as usize].set_userflag();
+        }
+    }
+
+    //------------------------------
+    // 盤面左クリック処理
+    //------------------------------
+    fn click_tbl_left (&mut self) {
+        // マウス左クリックされていない、マウスが盤面上ではない、なら何もしない
+        if !is_mouse_button_pressed(MouseButton::Left) || !self.on_table {
+            return
+        }
+        // ゲームが待機中なら初期化しなおす
+        if self.stat == 3 {
+            self.initial_game();
+            self.stat = 1;
+            return;
+        }
+        // ゲームは開始し、クリック待ちなら爆弾を生成する
+        if self.stat == 1 {
+            self.setting_bom();
+            self.stat = 2;
+        }
+
+        // カーソル位置及び隣接位置を開く
+        self.openchain(true, self.cursol_x, self.cursol_y);
+    }
+
+    //------------------------------
+    // 連鎖的に開く
+    //------------------------------
+    fn openchain(&mut self, onclick: bool, cursol_x: i32, cursol_y:i32) {
+        // すでに開いているなら何もしない
+        let tblpos = (cursol_y * self.width + cursol_x) as usize;
+        if self.table[tblpos].getstat() == 1 {
+            return;
+        }
+
+        // 参照位置に爆弾がある
+        if self.table[tblpos].is_bom() {
+            // 直接クリックした場合だけ開く
+            if onclick {
+                self.table[tblpos].open();
+                // 暫定で状態を変える
+                self.stat = 3;
+            }
+            return;
+        } 
+
+        // クリック位置を開く
+        self.table[tblpos].open();
+
+        // 周囲をチェックし開いていく
+        for y in -1..2 {
+            for x in -1..2 {
+                // 斜めは参照しない
+                if x != 0 && y != 0 {
+                    continue;
+                }
+
+                // 盤面の横位置、縦位置、テーブルインデックスを求める
+                let pos_x = cursol_x + x as i32;
+                let pos_y = cursol_y + y as i32;
+
+                // 盤面外ならスキップ
+                if pos_x < 0 || pos_x >= self.width ||
+                   pos_y < 0 || pos_y >= self.height {
+                    continue;
+                }
+
+                // 連鎖的に開く
+                self.openchain(false, pos_x, pos_y);
+            }
+        }
+    }
+
+    //------------------------------
+    // カーソル位置の処理
+    //------------------------------
+    fn set_around(&mut self) {
         // マウスの周囲９マスのインデックスを求める
         let tblpos = self.cursol_y * self.width + self.cursol_x;
         for y in 0..3 {
             for x in 0..3 {
-                // 一旦フラグを落とす
-                let index = self.around[y][x];
                 if self.around[y][x] != -1 {
-                    self.table[index as usize].close();
+                    self.table[self.around[y][x] as usize].setflg(0);
                 }
 
                 // 盤面の横位置、縦位置、テーブルインデックスを求める
@@ -113,10 +264,20 @@ impl GameMain {
                     self.around[y][x] = -1;
                 } else {
                     self.around[y][x] = tblpos + (x as i32 - 1) + self.width * (y as i32 - 1);
-                    // デバッグ用にフラグを立てる
-                    self.table[self.around[y][x] as usize].open();
+                    self.table[self.around[y][x] as usize].setflg(1);
                 }
             }
         }
     }
+}
+
+//------------------------------
+// 座標をインデックスへ変換
+//------------------------------
+fn get_index(cursol_x:i32, cursol_y:i32, width:i32, height:i32) -> i32 {
+    if cursol_x < 0 || cursol_x >= width ||
+       cursol_y < 0 || cursol_y >= height {
+        return -1;
+       }
+    cursol_y * width + cursol_x
 }
