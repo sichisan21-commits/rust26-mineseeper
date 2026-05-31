@@ -87,6 +87,7 @@ impl GameMain {
         // マウス位置を盤面位置に変換
         let cursol_x = ((mouse_x - WALL_LEFT) / PANEL_WIDTH) as i32;
         let cursol_y = ((mouse_y - WALL_TOP) / PANEL_HEIGHT) as i32;
+
         // カーソル位置が盤面からはみ出さないよう制御
         self.cursol_x = cursol_x.clamp(0, self.width - 1);
         self.cursol_y = cursol_y.clamp(0, self.height - 1);
