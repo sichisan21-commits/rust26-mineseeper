@@ -10,6 +10,7 @@ pub struct GameMain {
     height: i32,                            // 盤面の高さ
     bom_num: i32,                           // 爆弾の数
     table: Vec<Panel>,                      // 盤面データ
+    table_undo: Vec<Vec<Panel>>,            // 盤面データ（やり直し）
     cursol_x: i32,                          // カーソル横位置
     cursol_y: i32,                          // カーソル縦位置
     on_table: bool,                         // カーソルが盤面上にあるか
@@ -30,6 +31,7 @@ impl GameMain {
             height: 10,
             bom_num: 0,
             table: Vec::new(),
+            table_undo: Vec::new(),
             on_table: false,
             cursol_x: 0,
             cursol_y: 0,
@@ -54,7 +56,7 @@ impl GameMain {
         self.table.clear();
         for y in 0..self.height {
             for x in 0..self.width {
-                self.table.push(Panel::new(x, y));
+                self.table.push(Panel::new(x, y, self.width, self.height));
             }
         }
 
@@ -70,7 +72,7 @@ impl GameMain {
     // 爆弾を配置する
     //------------------------------
     pub fn setting_bom(&mut self) {
-        for x in 0..self.bom_num{
+        for _ in 0..self.bom_num{
             loop {
                 // 爆弾位置をランダム生成する
                 let land_x = rand::gen_range(0, self.width);
@@ -102,15 +104,11 @@ impl GameMain {
         // 該当パネルに爆弾を置き
         // 周囲のパネルのカウントを増やす
         self.table[tblpos as usize].bomon();
-        for y in -1..2 {
-            for x in -1..2 {
-                let tblpos = get_index(
-                    cursol_x + x, cursol_y + y,
-                    self.width, self.height);
-                if tblpos != -1 {
-                    self.table[tblpos as usize].numup();
-                }
-            } 
+        let around = self.table[tblpos as usize].get_around();      
+        for index in around.into_iter().flatten() {
+            if index != -1 {
+                self.table[index as usize].numup();
+            }
         }
         true
     }
@@ -133,7 +131,17 @@ impl GameMain {
     //------------------------------
     // カーソル位置の処理
     //------------------------------
-    pub fn get_cursolpos(&mut self) {
+    pub fn playcontrol(&mut self) {
+        let dt = get_frame_time();
+
+        // やり直し処理
+        if is_key_down(KeyCode::Up) && self.table_undo.len() > 0 {
+            // 一番最後の履歴へ戻す
+            self.table = self.table_undo[self.table_undo.len()-1].clone();
+            self.table_undo.remove(self.table_undo.len()-1);
+            return;
+        }
+
         // マウス位置の取得
         let (mouse_x, mouse_y) = mouse_position();
 
@@ -152,6 +160,15 @@ impl GameMain {
 
         // マウスクリック判定（右）
         self.click_tbl_right();
+
+        if is_key_down(KeyCode::Left) {
+            self.table_undo.push(self.table.clone());
+            self.auto_flag_dangar();
+        }
+        if is_key_down(KeyCode::Right) {
+            self.table_undo.push(self.table.clone());
+            self.auto_flag_safety();
+        }
     }
 
     //------------------------------
@@ -178,6 +195,7 @@ impl GameMain {
         if !is_mouse_button_pressed(MouseButton::Left) || !self.on_table {
             return
         }
+
         // ゲームが待機中なら初期化しなおす
         if self.stat == 3 {
             self.initial_game();
@@ -190,15 +208,11 @@ impl GameMain {
             self.stat = 2;
         }
 
+        // 変更前の盤面を保存
+        self.table_undo.push(self.table.clone());
+
         // カーソル位置及び隣接位置を開く
         self.openchain(true, self.cursol_x, self.cursol_y);
-
-        // 自動的に旗を立てる
-        for x in 0..self.width {
-            for y in 0..self.height {
-                self.auto_flag(x, y);
-            }
-        }
     }
 
     //------------------------------
@@ -228,8 +242,9 @@ impl GameMain {
         // 周囲をチェックし開いていく
         for y in -1..2 {
             for x in -1..2 {
-                // 斜めは参照しない
-                if x != 0 && y != 0 {
+                // 斜めは参照しない（周りに爆弾が一つでもある場合）
+                if self.table[tblpos].get_around_num() != 0 &&
+                   x != 0 && y != 0 {
                     continue;
                 }
 
@@ -251,13 +266,36 @@ impl GameMain {
     }
 
     //------------------------------
-    // 自動で旗を立てる
+    // 自動的に判別し危険マス／安全マスにフラグを立てる
     //------------------------------
-    fn auto_flag (&mut self, cursol_x: i32, cursol_y:i32) {
+    fn auto_flag_dangar (&mut self) {
+        let mut is_update = false;
+        for x in 0..self.width {
+            for y in 0..self.height {
+                is_update |= self.flag_dangar(x, y);
+            }
+        }
+        println!("is_update={}", is_update);
+    }
+
+    fn auto_flag_safety (&mut self) {
+        let mut is_update = false;
+        for x in 0..self.width {
+            for y in 0..self.height {
+                is_update |= self.flag_safety(x, y);
+            }
+        }
+        println!("is_update={}", is_update);
+    }
+
+    //------------------------------
+    // 自動で旗を立てる（危険フラグ）
+    //------------------------------
+    fn flag_dangar (&mut self, cursol_x: i32, cursol_y:i32) -> bool {
         // 周囲に爆弾なしの場合はないもしない
         let tblpos = get_index(cursol_x, cursol_y, self.width, self.height);
         if tblpos == -1 || self.table[tblpos as usize].get_around_num() == 0 {
-            return;
+            return false
         }
 
         // 周囲の開いていないパネルを数える
@@ -273,7 +311,9 @@ impl GameMain {
                     continue;
                 }
                 // 周囲の閉じているパネルのインデックスを保持
-                if self.table[index as usize].getstat() == 0 {
+                // 安全フラグのパネルは除外
+                if self.table[index as usize].getstat() == 0 && 
+                   self.table[index as usize].get_autoflag() != 2 {
                     close_list.push(index);
                 }
             }
@@ -281,13 +321,62 @@ impl GameMain {
 
         // 周囲の開いてないパネル数が一致しなければ終了
         if self.table[tblpos as usize].get_around_num() != close_list.len() as i32 {
-            return;
+            return false;
         }
 
         // 周囲の未開封マスが全て爆弾と判断できた
         for index in close_list {
-            self.table[index as usize].set_userflag(1);
+            // 危険フラグを立てる
+            self.table[index as usize].set_autoflag(1);
         }
+        true
+    }
+
+    //------------------------------
+    // 自動で旗を立てる（安全フラグ）
+    //------------------------------
+    fn flag_safety (&mut self, cursol_x: i32, cursol_y:i32) -> bool {
+        // 周囲に爆弾なしあるいは未開封パネルの場合はないもしない
+        let tblpos = get_index(cursol_x, cursol_y, self.width, self.height);
+        if tblpos == -1 || self.table[tblpos as usize].get_around_num() == 0 || self.table[tblpos as usize].getstat() == 0{
+            return false
+        }
+
+        // 周囲の開いていないパネルを数える
+        let mut close_list:Vec<i32> = Vec::new();
+        let mut bomnum = 0;
+        for y in -1..2 {
+            for x in -1..2 {
+                // 盤面の横位置、縦位置、テーブルインデックスを求める
+                let pos_x = cursol_x + x as i32;
+                let pos_y = cursol_y + y as i32;
+                let index = get_index(pos_x, pos_y, self.width, self.height);
+                // 盤面外ならスキップ
+                if index == -1 {
+                    continue;
+                }
+
+                // 危険フラグが立っている場合爆弾数としてカウント
+                if self.table[index as usize].get_autoflag() == 1 {
+                   bomnum += 1;
+                } else if self.table[index as usize].getstat() == 0 &&
+                          self.table[index as usize].get_autoflag() != 2 {
+                    // 周囲の閉じているパネルのインデックスを保持
+                    close_list.push(index);
+                }
+            }
+        }
+
+        // 危険フラグの数が周囲の爆弾数と一致していなければ抜ける
+        if self.table[tblpos as usize].get_around_num() != bomnum  {
+            return false
+        }
+
+        // 爆弾数と危険フラグ数が一致しているなら、残りの未開封パネルは安全
+        for index in close_list {
+            self.table[index as usize].set_autoflag(2);
+        }
+        true
     }
 
     //------------------------------
