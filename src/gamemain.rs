@@ -13,8 +13,7 @@ pub struct GameMain {
     table_undo: Vec<Vec<Panel>>,            // 盤面データ（やり直し）
     cursol_x: i32,                          // カーソル横位置
     cursol_y: i32,                          // カーソル縦位置
-    on_table: bool,                         // カーソルが盤面上にあるか
-    around: [[i32; 3];3],                   // カーソル周囲９マスのテーブル位置
+    cursol_index: i32,                      // カーソル位置のパネル番号
 }
 
 //--------------------------------------------------
@@ -32,10 +31,9 @@ impl GameMain {
             bom_num: 0,
             table: Vec::new(),
             table_undo: Vec::new(),
-            on_table: false,
             cursol_x: 0,
             cursol_y: 0,
-            around: [[-1;3];3],
+            cursol_index: -1,
         }
     }
 
@@ -54,6 +52,7 @@ impl GameMain {
     pub fn initial_game(&mut self) {
         // 盤面を初期化する
         self.table.clear();
+        self.table_undo.clear();
         for y in 0..self.height {
             for x in 0..self.width {
                 self.table.push(Panel::new(x, y, self.width, self.height));
@@ -61,8 +60,8 @@ impl GameMain {
         }
 
         // カーソル位置を初期化
-        self.cursol_x = 0;
-        self.cursol_y = 0;
+        self.cursol_x = -1;
+        self.cursol_y = -1;
 
         // クリック待ち
         self.stat = 1;
@@ -123,8 +122,22 @@ impl GameMain {
             PANEL_HEIGHT * self.height as f32 + WALL_TOP * 2.0,
             LAYOUT_COLOR);
 
+        // パネルを描画する
         for panel in &self.table {
             panel.draw_panel();
+        }
+
+        // カーソル周りに枠を表示
+        // カーソルのあっているパネルが開いていて、周囲の爆弾数が１以上の場合
+        if self.cursol_index != -1 &&
+           self.table[self.cursol_index as usize].getstat() == 1 &&
+           self.table[self.cursol_index as usize].get_around_num() > 0 {
+            let border = 4.0;
+            let curx = (self.cursol_x - 1) as f32 * PANEL_WIDTH + WALL_LEFT;
+            let cury = (self.cursol_y - 1) as f32 * PANEL_WIDTH + WALL_TOP;
+            draw_rectangle_lines(curx, cury,
+                 PANEL_WIDTH * 3.0, PANEL_HEIGHT * 3.0,
+                 border, YELLOW);
         }
     }
 
@@ -132,28 +145,25 @@ impl GameMain {
     // カーソル位置の処理
     //------------------------------
     pub fn playcontrol(&mut self) {
-        let dt = get_frame_time();
-
         // やり直し処理
-        if is_key_down(KeyCode::Up) && self.table_undo.len() > 0 {
+        if is_key_pressed(KeyCode::Up) && self.table_undo.len() > 0 {
             // 一番最後の履歴へ戻す
             self.table = self.table_undo[self.table_undo.len()-1].clone();
             self.table_undo.remove(self.table_undo.len()-1);
+            self.stat = 2;
             return;
         }
 
         // マウス位置の取得
         let (mouse_x, mouse_y) = mouse_position();
-
-        // マウス位置を盤面位置に変換
         let cursol_x = ((mouse_x - WALL_LEFT) / PANEL_WIDTH) as i32;
         let cursol_y = ((mouse_y - WALL_TOP) / PANEL_HEIGHT) as i32;
+        self.cursol_index = get_index(cursol_x, cursol_y, self.width, self.height);
+//        println!("{},{},{}",cursol_x, cursol_y, self.cursol_index);
 
         // カーソル位置が盤面からはみ出さないよう制御
         self.cursol_x = cursol_x.clamp(0, self.width - 1);
         self.cursol_y = cursol_y.clamp(0, self.height - 1);
-        self.on_table = self.cursol_x == cursol_x && self.cursol_y == cursol_y;
-        self.set_around();
 
         // マウスクリック判定（左）
         self.click_tbl_left();
@@ -161,30 +171,29 @@ impl GameMain {
         // マウスクリック判定（右）
         self.click_tbl_right();
 
-        if is_key_down(KeyCode::Left) {
-            self.table_undo.push(self.table.clone());
-            self.auto_flag_dangar();
-        }
-        if is_key_down(KeyCode::Right) {
-            self.table_undo.push(self.table.clone());
-            self.auto_flag_safety();
-        }
+        // 危険マス・安全マスの自動判定
+        self.auto_flag();
     }
 
     //------------------------------
-    // 盤面左クリック処理
+    // 盤面右クリック処理
     //------------------------------
-    fn click_tbl_right (&mut self) {
+    fn click_tbl_right (&mut self) -> bool {
+        let mut is_update = false;
+
         // マウス右クリックされていない、マウスが盤面上ではない、なら何もしない
-        if !is_mouse_button_pressed(MouseButton::Right) || !self.on_table {
-            return
+        if !is_mouse_button_pressed(MouseButton::Right) ||
+            self.cursol_index == -1 {
+            return is_update
         }
 
         // フラグ処理を行う
         let tblpos = get_index(self.cursol_x, self.cursol_y, self.width, self.height);
         if tblpos != -1 {
-            self.table[tblpos as usize].set_userflag(1);
+            self.table[tblpos as usize].set_userflag();
+            is_update = true;
         }
+        is_update
     }
 
     //------------------------------
@@ -192,7 +201,8 @@ impl GameMain {
     //------------------------------
     fn click_tbl_left (&mut self) {
         // マウス左クリックされていない、マウスが盤面上ではない、なら何もしない
-        if !is_mouse_button_pressed(MouseButton::Left) || !self.on_table {
+        if !is_mouse_button_pressed(MouseButton::Left) ||
+           self.cursol_index == -1 {
             return
         }
 
@@ -268,143 +278,132 @@ impl GameMain {
     //------------------------------
     // 自動的に判別し危険マス／安全マスにフラグを立てる
     //------------------------------
-    fn auto_flag_dangar (&mut self) {
-        let mut is_update = false;
-        for x in 0..self.width {
-            for y in 0..self.height {
-                is_update |= self.flag_dangar(x, y);
-            }
-        }
-        println!("is_update={}", is_update);
-    }
+    fn auto_flag (&mut self) {
+        let mut is_update= false;
 
-    fn auto_flag_safety (&mut self) {
-        let mut is_update = false;
-        for x in 0..self.width {
-            for y in 0..self.height {
-                is_update |= self.flag_safety(x, y);
+        // 無限ループを考慮して、最大１０回志向する
+        for _ in 0..10 {
+            is_update = false;
+
+            // 危険マスを判定
+            for x in 0..self.width {
+                for y in 0..self.height {
+                    is_update |= self.flag_dangar(x, y);
+                }
+            }
+
+            // 安全マスを判定
+            for x in 0..self.width {
+                for y in 0..self.height {
+                    is_update |= self.flag_safety(x, y);
+                }
+            }
+
+            // フラグの更新がなければループ終了
+            if !is_update {
+                break;
             }
         }
-        println!("is_update={}", is_update);
+        if is_update {
+            println!("試行回数に達した");
+        }
     }
 
     //------------------------------
     // 自動で旗を立てる（危険フラグ）
     //------------------------------
     fn flag_dangar (&mut self, cursol_x: i32, cursol_y:i32) -> bool {
+        let mut is_update = false;
+
         // 周囲に爆弾なしの場合はないもしない
         let tblpos = get_index(cursol_x, cursol_y, self.width, self.height);
         if tblpos == -1 || self.table[tblpos as usize].get_around_num() == 0 {
-            return false
+            return is_update
         }
+
+        // 周囲マスのインデックスを取得
+        let around = self.table[tblpos as usize].get_around();
 
         // 周囲の開いていないパネルを数える
         let mut close_list:Vec<i32> = Vec::new();
-        for y in -1..2 {
-            for x in -1..2 {
-                // 盤面の横位置、縦位置、テーブルインデックスを求める
-                let pos_x = cursol_x + x as i32;
-                let pos_y = cursol_y + y as i32;
-                let index = get_index(pos_x, pos_y, self.width, self.height);
-                // 盤面外ならスキップ
-                if index == -1 {
-                    continue;
-                }
-                // 周囲の閉じているパネルのインデックスを保持
-                // 安全フラグのパネルは除外
-                if self.table[index as usize].getstat() == 0 && 
-                   self.table[index as usize].get_autoflag() != 2 {
-                    close_list.push(index);
-                }
+        for index in around.into_iter().flatten() {
+            // 有効範囲外はスキップ
+            if index == -1 {
+                continue;
+            }
+
+            // 周囲の閉じているパネルのインデックスを保持
+            // 安全フラグのパネルは除外
+            if self.table[index as usize].getstat() == 0 && 
+               self.table[index as usize].get_autoflag() != 2 {
+                close_list.push(index);
             }
         }
 
         // 周囲の開いてないパネル数が一致しなければ終了
         if self.table[tblpos as usize].get_around_num() != close_list.len() as i32 {
-            return false;
+            return is_update;
         }
 
         // 周囲の未開封マスが全て爆弾と判断できた
         for index in close_list {
             // 危険フラグを立てる
-            self.table[index as usize].set_autoflag(1);
+            if self.table[index as usize].get_autoflag() != 1 {
+                self.table[index as usize].set_autoflag(1);
+                is_update = true;
+            }
         }
-        true
+        is_update
     }
 
     //------------------------------
     // 自動で旗を立てる（安全フラグ）
     //------------------------------
     fn flag_safety (&mut self, cursol_x: i32, cursol_y:i32) -> bool {
+        let mut is_update = false;
+
         // 周囲に爆弾なしあるいは未開封パネルの場合はないもしない
         let tblpos = get_index(cursol_x, cursol_y, self.width, self.height);
         if tblpos == -1 || self.table[tblpos as usize].get_around_num() == 0 || self.table[tblpos as usize].getstat() == 0{
-            return false
+            return is_update
         }
 
-        // 周囲の開いていないパネルを数える
+        // 周囲マスのインデックスを取得
+        let around = self.table[tblpos as usize].get_around();
+
+        // 周囲の開いていないパネルと危険マスを数える
         let mut close_list:Vec<i32> = Vec::new();
         let mut bomnum = 0;
-        for y in -1..2 {
-            for x in -1..2 {
-                // 盤面の横位置、縦位置、テーブルインデックスを求める
-                let pos_x = cursol_x + x as i32;
-                let pos_y = cursol_y + y as i32;
-                let index = get_index(pos_x, pos_y, self.width, self.height);
-                // 盤面外ならスキップ
-                if index == -1 {
-                    continue;
-                }
+        for index in around.into_iter().flatten() {
+            // 盤面外ならスキップ
+            if index == -1 {
+                continue;
+            }
 
-                // 危険フラグが立っている場合爆弾数としてカウント
-                if self.table[index as usize].get_autoflag() == 1 {
-                   bomnum += 1;
-                } else if self.table[index as usize].getstat() == 0 &&
-                          self.table[index as usize].get_autoflag() != 2 {
-                    // 周囲の閉じているパネルのインデックスを保持
-                    close_list.push(index);
-                }
+            // 危険フラグが立っている場合爆弾数としてカウント
+            if self.table[index as usize].get_autoflag() == 1 {
+                bomnum += 1;
+            } else if self.table[index as usize].getstat() == 0 &&
+                      self.table[index as usize].get_autoflag() != 2 {
+                // 周囲の閉じているパネルのインデックスを保持
+                close_list.push(index);
             }
         }
 
         // 危険フラグの数が周囲の爆弾数と一致していなければ抜ける
         if self.table[tblpos as usize].get_around_num() != bomnum  {
-            return false
+            return is_update
         }
 
-        // 爆弾数と危険フラグ数が一致しているなら、残りの未開封パネルは安全
+        // 爆弾数と危険フラグ数が一致しているなら
+        // 残りの未開封パネルに安全フラグを立てる
         for index in close_list {
-            self.table[index as usize].set_autoflag(2);
-        }
-        true
-    }
-
-    //------------------------------
-    // カーソル位置の処理
-    //------------------------------
-    fn set_around(&mut self) {
-        // マウスの周囲９マスのインデックスを求める
-        let tblpos = self.cursol_y * self.width + self.cursol_x;
-        for y in 0..3 {
-            for x in 0..3 {
-                if self.around[y][x] != -1 {
-                    self.table[self.around[y][x] as usize].setflg(0);
-                }
-
-                // 盤面の横位置、縦位置、テーブルインデックスを求める
-                let pos_x = self.cursol_x + x as i32 -1;
-                let pos_y = self.cursol_y + y as i32 -1;
-
-                // インデックスを簡易テーブルに保存する
-                if pos_x < 0 || pos_x >= self.width ||
-                   pos_y < 0 || pos_y >= self.height {
-                    self.around[y][x] = -1;
-                } else {
-                    self.around[y][x] = tblpos + (x as i32 - 1) + self.width * (y as i32 - 1);
-                    self.table[self.around[y][x] as usize].setflg(1);
-                }
+            if self.table[index as usize].get_autoflag() != 2 {
+                self.table[index as usize].set_autoflag(2);
+                is_update = true;
             }
         }
+        is_update
     }
 }
 

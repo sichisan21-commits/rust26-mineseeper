@@ -78,9 +78,8 @@ impl Panel {
     //------------------------------
     // ユーザのフラグを立てる
     //------------------------------
-    pub fn set_userflag(&mut self, flg: i32) {
-        self.user_flg = flg;
-//        self.user_flg = (self.user_flg + 1) % 3;
+    pub fn set_userflag(&mut self) {
+        self.user_flg = (self.user_flg + 1) % 3;
     }
 
     pub fn setflg(&mut self, flg: i32) {
@@ -119,7 +118,9 @@ impl Panel {
     // 周囲の爆弾カウントを増やす
     //------------------------------
     pub fn numup(&mut self) {
-        self.around_num += 1;
+        if !self.isbom {
+            self.around_num += 1;
+        }
     }
 
     //------------------------------
