@@ -2,13 +2,14 @@ use macroquad::prelude::*;
 mod panel;
 mod gamemain;
 use gamemain::GameMain;
+mod gametable;
 
 //--------------------------------------------------
 // 定数
 //--------------------------------------------------
 pub const PANEL_WIDTH: f32 = 25.0;
 pub const PANEL_HEIGHT: f32 = 25.0;
-pub const WALL_LEFT: f32 = 20.0;
+pub const WALL_LEFT: f32 = 200.0;
 pub const WALL_TOP: f32 = 20.0;
 //--- 色 ---
 // 盤面全体

@@ -62,16 +62,16 @@ impl Panel {
     }
 
     //------------------------------
-    // ゲームの自動判定フラグ
+    // ゲームの自動判定フラグセット
     //------------------------------
     pub fn set_autoflag(&mut self, flg: i32) {
         self.auto_flg = flg;
     }
 
     //------------------------------
-    // ゲームの自動判定フラグ
+    // ゲームの自動判定フラグ取得
     //------------------------------
-    pub fn get_autoflag(&mut self) -> i32{
+    pub fn get_autoflag(&self) -> i32{
         self.auto_flg
     }
 
@@ -89,14 +89,14 @@ impl Panel {
     //------------------------------
     // 状態を返却する
     //------------------------------
-    pub fn getstat(&mut self) -> i32 {
+    pub fn getstat(&self) -> i32 {
         self.stat
     }
 
     //------------------------------
     // 周囲の爆弾数を返却する
     //------------------------------
-    pub fn get_around_num(&mut self) -> i32 {
+    pub fn get_around_num(&self) -> i32 {
         self.around_num
     }
 
@@ -105,19 +105,21 @@ impl Panel {
     //------------------------------
     pub fn bomon(&mut self) {
         self.isbom = true;
+        self.around_num = 0;
     }
 
     //------------------------------
     // 爆弾を持っているか
     //------------------------------
-    pub fn is_bom(&mut self) -> bool {
+    pub fn is_bom(&self) -> bool {
         self.isbom
     }
 
     //------------------------------
     // 周囲の爆弾カウントを増やす
     //------------------------------
-    pub fn numup(&mut self) {
+    pub fn num_up(&mut self) {
+        // 自分自身が爆弾マスでない場合にカウントを増やす
         if !self.isbom {
             self.around_num += 1;
         }
