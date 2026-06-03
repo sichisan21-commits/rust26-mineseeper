@@ -1,5 +1,6 @@
 use macroquad::prelude::*;
 use crate::panel::Panel;
+use crate::panel::PanelSts;
 use crate::utils::*;
 
 pub struct GameTable {
@@ -7,6 +8,7 @@ pub struct GameTable {
     height: i32,                            // 盤面の高さ
     cursol_x: i32,                          // カーソル横位置
     cursol_y: i32,                          // カーソル縦位置
+    cursol_index: i32,                      // カーソル位置の配列番号
     num_bom: i32,                           // 爆弾の数
     table: Vec<Panel>,                      // 盤面データ
     table_undo: Vec<Vec<Panel>>,            // 盤面データ（履歴）
@@ -26,6 +28,7 @@ impl GameTable {
             height: 0,
             cursol_x: 0,
             cursol_y: 0,
+            cursol_index: 0,
             num_bom: 0,
             table: Vec::new(),
             table_undo: Vec::new(),
@@ -47,6 +50,15 @@ impl GameTable {
                 self.table.push(Panel::new(x, y, self.width, self.height));
             }
         }
+    }
+
+    //------------------------------
+    // カーソル位置をセットする
+    //------------------------------
+    pub fn set_cursol(&mut self, cursol_x:i32, cursol_y:i32, cursol_index:i32) {
+        self.cursol_x = cursol_x;
+        self.cursol_y = cursol_y;
+        self.cursol_index = cursol_index;
     }
 
     //------------------------------
@@ -75,14 +87,6 @@ impl GameTable {
         }
         self.table_undo.clear();
         self.useundo = 0;
-    }
-
-    //------------------------------
-    // 指定のマスに爆弾を置く
-    //------------------------------
-    pub fn set_cursol(&mut self, cursol_x:i32, cursol_y:i32) {
-        self.cursol_x = cursol_x;
-        self.cursol_y = cursol_y;
     }
 
     //------------------------------
@@ -182,7 +186,7 @@ impl GameTable {
 
         // クリック位置を開く
         self.table[cursol_index as usize].open();
-
+        
         // クリック位置が爆弾の場合終了
         if self.table[cursol_index as usize].is_bom() {
             return true
@@ -206,73 +210,105 @@ impl GameTable {
             return false
         }
 
-        // 旗を立てる
+        // 旗の操作
         self.table[cursol_index as usize].set_userflag();
         true
     }
 
     //------------------------------
-    // 旗が確定で付けることができるパネルの強調
+    // カーソル周囲９マスで分かる情報を設定する
     //------------------------------
     pub fn update_compflg(&mut self) {
-        for pos_y in 0..self.height {
-            for pos_x in 0..self.width {
-                self.set_compflg(pos_x, pos_y);
+        // カーソルが盤面外なら何もしない
+        if self.cursol_index == -1 {
+            return
+        }
+
+        // カーソルの周囲９マスをチェックする
+        let around = self.table[self.cursol_index as usize].get_around_tbl();
+
+        // 一旦強調表示をクリア
+        for index in around.into_iter().flatten() {
+            if index != -1 {
+                self.table[index as usize].bold_off();
+            }
+        }
+
+        // カーソル周囲９マスをチェックする
+        for index in around.into_iter().flatten() {
+            if index != -1 {
+                self.update_compflg_one(index);
             }
         }
     }
 
     //------------------------------
-    // 指定マスの周辺の未開封パネルと旗の数を検証する
+    // 指定マスの周囲９マスをチェックし、旗が立てられそうなら強調表示する
     //------------------------------
-    fn set_compflg (&mut self, pos_x:i32, pos_y: i32) {
-        // 閉じているマスは対象外
-        let pos_index = get_index(
-            pos_x, pos_y, self.width, self.height);                
-        if !self.table[pos_index as usize].is_open() ||
-           self.table[pos_index as usize].get_around_num() == 0 {
+    fn update_compflg_one(&mut self, cursol_index:i32) {
+        // カーソルが盤面外の場合
+        // またはカーソル位置のパネルは閉じられている場合
+        // カーソル周囲の爆弾数が０の場合なにもしない
+        if cursol_index == -1 ||
+           !self.table[cursol_index as usize].is_open() ||
+           self.table[cursol_index as usize].get_around_num() == 0 {
             return;
         }
 
-        // 周囲９マスのテーブルを取得
-        let around = self.table[pos_index as usize].get_around_tbl();
-
-        // 閉じているマスと旗の立てられているマスのカウント
+        // カーソルの周囲９マスをチェックする
+        let around = self.table[cursol_index as usize].get_around_tbl();      
+        // 閉じているマスと旗の立てられているマスをカウントする
+        let mut close_list:Vec<i32> = Vec::new();
         let mut close_cnt = 0;
         let mut flag_cnt = 0;
+        let mut miss_cnt = 0;
         for index in around.into_iter().flatten() {
             // 範囲外のマス、開封済みのマスはスキップ
-            if index == -1 || self.table[index as usize].is_open(){
+            if index == -1 ||
+                self.table[index as usize].is_open() {
                 continue;
             }
 
             // 純粋に未開封のマスをカウントする
             close_cnt += 1;
 
-            // 正しく建てられた旗か判定
-            if flag_cnt != -1 && self.table[index as usize].is_userflag() {
+            if !self.table[index as usize].is_userflag() {
+                // 旗が立てられていない場合、未開封位置を保持する
+                close_list.push(index);
+            } else {
+                // 旗が立てられている場合カウントする
                 if !self.table[index as usize].is_bom() {
-                    // 間違った旗ならカウント無効
-                    flag_cnt = -1;
+                    // 間違った旗の数をカウント
+                    miss_cnt += 1;
                 } else {
-                    // 正しい旗ならカウント
+                    // 正しい旗の数をカウント
                     flag_cnt += 1;                            
                 } 
             }
         }
 
-        // 一旦強調表示をクリア
-        self.table[pos_index as usize].bold_off();
-
-        // 周囲の爆弾数と未開封パネル数が一致していなければ何もしない
-        if !(close_cnt == self.table[pos_index as usize].get_around_num()) ||
-           flag_cnt == self.table[pos_index as usize].get_around_num() {
+        let around_num = self.table[cursol_index as usize].get_around_num();
+        // フラグが正しく立てられていて爆弾数と一致している場合
+        // 安全マスとしてフラグを立てる
+        if (close_cnt > around_num && flag_cnt == around_num && miss_cnt == 0) {
+            for index in close_list {
+                self.table[index as usize].set_autoflag(2);                
+            }
             return
         }
 
+        // 周囲の爆弾数と未開封パネル数が一致していない
+        // または旗の数が爆弾数と一致していて間違った旗がなければ
+        // 強調表示はしない
+        if close_cnt != around_num ||
+           (flag_cnt == around_num && miss_cnt == 0) {
+            return
+        } 
+
         // 周囲の爆弾の数と未開封のマスの数が一致していて
         // 旗の数が一致していない場合強調表示
-        self.table[pos_index as usize].bold_on();
+        self.table[cursol_index as usize].bold_on();
+
     }
 
     //------------------------------

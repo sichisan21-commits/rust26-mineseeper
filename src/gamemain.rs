@@ -128,7 +128,7 @@ impl GameMain {
         // カーソル位置が盤面からはみ出さないよう制御
         self.cursol_x = cursol_x.clamp(0, self.width - 1);
         self.cursol_y = cursol_y.clamp(0, self.height - 1);
-        self.table.set_cursol(self.cursol_x, self.cursol_y);
+        self.table.set_cursol(self.cursol_x, self.cursol_y, self.cursol_index);
 
         let mut is_update = false;
 
@@ -141,8 +141,7 @@ impl GameMain {
         // 更新が発生した場合
         if is_update {
             // サポート情報を設定する
-            self.table.update_compflg();
-            self.table.auto_flag();
+//            self.table.auto_flag();
             // 今の盤面を保存する
             self.table.undo_push();
             // 爆弾が開かれた場合はステータスを変える
@@ -150,6 +149,9 @@ impl GameMain {
                 self.stat = 3;
             }
         }
+
+        // カーソル周囲９マスのヒントを設定する
+        self.table.update_compflg();
     }
 
     //------------------------------
