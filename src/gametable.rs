@@ -1,12 +1,16 @@
 use macroquad::prelude::*;
 use crate::panel::Panel;
+use crate::utils::*;
 
 pub struct GameTable {
     width: i32,                             // 盤面の幅
     height: i32,                            // 盤面の高さ
+    cursol_x: i32,                          // カーソル横位置
+    cursol_y: i32,                          // カーソル縦位置
     num_bom: i32,                           // 爆弾の数
     table: Vec<Panel>,                      // 盤面データ
     table_undo: Vec<Vec<Panel>>,            // 盤面データ（履歴）
+    useundo: usize,                         // 使用されるundo番号
 }
 
 //--------------------------------------------------
@@ -20,9 +24,12 @@ impl GameTable {
         GameTable {
             width: 0,
             height: 0,
+            cursol_x: 0,
+            cursol_y: 0,
             num_bom: 0,
             table: Vec::new(),
             table_undo: Vec::new(),
+            useundo: 0,
         }
     }
 
@@ -35,7 +42,6 @@ impl GameTable {
 
         // 盤面を初期化する
         self.table.clear();
-        self.table_undo.clear();
         for y in 0..self.height {
             for x in 0..self.width {
                 self.table.push(Panel::new(x, y, self.width, self.height));
@@ -67,6 +73,16 @@ impl GameTable {
                 }
             }
         }
+        self.table_undo.clear();
+        self.useundo = 0;
+    }
+
+    //------------------------------
+    // 指定のマスに爆弾を置く
+    //------------------------------
+    pub fn set_cursol(&mut self, cursol_x:i32, cursol_y:i32) {
+        self.cursol_x = cursol_x;
+        self.cursol_y = cursol_y;
     }
 
     //------------------------------
@@ -83,7 +99,7 @@ impl GameTable {
         self.table[tblpos as usize].bomon();
 
         // 周囲のパネルのカウントを増やす
-        let around = self.table[tblpos as usize].get_around();      
+        let around = self.table[tblpos as usize].get_around_tbl();      
         for index in around.into_iter().flatten() {
             if index != -1 {
                 self.table[index as usize].num_up();
@@ -96,28 +112,47 @@ impl GameTable {
     // 今の盤面をアンドゥ領域に保持
     //------------------------------
     pub fn undo_push(&mut self) {
+        // 今参照されている UNDO 情報より後ろは破棄
+        self.table_undo.truncate(self.useundo + 1);
+
+        // 最後に保存した UNDO 情報と今の盤面が一致するなら UNDO 情報は保持しない
+        if let Some(last) = self.table_undo.last() {
+            if last == &self.table {
+                return;
+            }
+        }
+
+        // UNDO 情報を追加
         self.table_undo.push(self.table.clone());
+        self.useundo = self.table_undo.len();
     }
 
     //------------------------------
-    // 最新のUNDO情報を破棄する
+    // UNDO 実行中か
     //------------------------------
-    pub fn undo_remove(&mut self) {
-        let undonum = self.table_undo.len();
-        if undonum > 0 {
-            self.table_undo.remove(undonum - 1);
-        }
+    pub fn is_useundo(&self) -> bool {
+        self.useundo < self.table_undo.len()
     }
 
     //------------------------------
     // テーブルをUNDOする
     //------------------------------
-    pub fn tableUndo(&mut self) {
-        let undonum = self.table_undo.len();
-        if undonum > 0 {
+    pub fn table_undo(&mut self) {
+        if self.useundo > 0 {
             // 一番最後の履歴へ戻す
-            self.table = self.table_undo[undonum - 1].clone();
-            self.table_undo.remove(undonum - 1);
+            self.useundo -= 1;
+            self.table = self.table_undo[self.useundo].clone();
+        }
+    }
+
+    //------------------------------
+    // テーブルをREDOする
+    //------------------------------
+    pub fn table_redo(&mut self) {
+        if self.useundo < self.table_undo.len() -1 {
+            // 次の履歴へ戻す
+            self.useundo += 1;
+            self.table = self.table_undo[self.useundo].clone();
         }
     }
 
@@ -125,11 +160,11 @@ impl GameTable {
     // 踏まれた爆弾数を取得
     //------------------------------
     pub fn open_bomnum(&mut self) -> usize {
-        let op_bomnum = self.table
+        // 開かれている爆弾を数える
+        self.table
             .iter()
-            .filter(|p| p.is_bom() && p.getstat() == 1)
-            .count();
-        op_bomnum
+            .filter(|p| p.is_bom() && p.is_open())
+            .count()
     }
 
     //------------------------------
@@ -141,7 +176,7 @@ impl GameTable {
         let cursol_index = get_index(cursol_x, cursol_y, self.width, self.height);
  
         // クリック位置が盤面外、あるいはすでに開かれているなら何もしない
-        if cursol_index == -1 || self.table[cursol_index as usize].getstat() == 1{
+        if cursol_index == -1 || self.table[cursol_index as usize].is_open() {
             return false
         }
 
@@ -155,8 +190,89 @@ impl GameTable {
 
         // クリック位置からパネルを連鎖的に開く
         self.openchain(cursol_index);
-        self.auto_flag();
         true
+    }
+
+    //------------------------------
+    // 左クリック処理
+    // 変更があった場合 true、ない場合は false を返す
+    //------------------------------
+    pub fn click_right(&mut self, cursol_x: i32, cursol_y: i32) -> bool {
+        // 座標をインデックスに変換
+        let cursol_index = get_index(cursol_x, cursol_y, self.width, self.height);
+ 
+        // クリック位置が盤面外、あるいはすでに開かれているなら何もしない
+        if cursol_index == -1 || self.table[cursol_index as usize].is_open() {
+            return false
+        }
+
+        // 旗を立てる
+        self.table[cursol_index as usize].set_userflag();
+        true
+    }
+
+    //------------------------------
+    // 旗が確定で付けることができるパネルの強調
+    //------------------------------
+    pub fn update_compflg(&mut self) {
+        for pos_y in 0..self.height {
+            for pos_x in 0..self.width {
+                self.set_compflg(pos_x, pos_y);
+            }
+        }
+    }
+
+    //------------------------------
+    // 指定マスの周辺の未開封パネルと旗の数を検証する
+    //------------------------------
+    fn set_compflg (&mut self, pos_x:i32, pos_y: i32) {
+        // 閉じているマスは対象外
+        let pos_index = get_index(
+            pos_x, pos_y, self.width, self.height);                
+        if !self.table[pos_index as usize].is_open() ||
+           self.table[pos_index as usize].get_around_num() == 0 {
+            return;
+        }
+
+        // 周囲９マスのテーブルを取得
+        let around = self.table[pos_index as usize].get_around_tbl();
+
+        // 閉じているマスと旗の立てられているマスのカウント
+        let mut close_cnt = 0;
+        let mut flag_cnt = 0;
+        for index in around.into_iter().flatten() {
+            // 範囲外のマス、開封済みのマスはスキップ
+            if index == -1 || self.table[index as usize].is_open(){
+                continue;
+            }
+
+            // 純粋に未開封のマスをカウントする
+            close_cnt += 1;
+
+            // 正しく建てられた旗か判定
+            if flag_cnt != -1 && self.table[index as usize].is_userflag() {
+                if !self.table[index as usize].is_bom() {
+                    // 間違った旗ならカウント無効
+                    flag_cnt = -1;
+                } else {
+                    // 正しい旗ならカウント
+                    flag_cnt += 1;                            
+                } 
+            }
+        }
+
+        // 一旦強調表示をクリア
+        self.table[pos_index as usize].bold_off();
+
+        // 周囲の爆弾数と未開封パネル数が一致していなければ何もしない
+        if !(close_cnt == self.table[pos_index as usize].get_around_num()) ||
+           flag_cnt == self.table[pos_index as usize].get_around_num() {
+            return
+        }
+
+        // 周囲の爆弾の数と未開封のマスの数が一致していて
+        // 旗の数が一致していない場合強調表示
+        self.table[pos_index as usize].bold_on();
     }
 
     //------------------------------
@@ -173,13 +289,13 @@ impl GameTable {
 
         // 周囲をチェックし開いていく
         // 自身の座標情報と周りのインデックス配列を取得
-        let around = self.table[cursol_index as usize].get_around();
+        let around = self.table[cursol_index as usize].get_around_tbl();
         for index in around.into_iter().flatten() {
-            // クリック位置と同じ場所はスキップ
             // 盤面外ならスキップ
             // 爆弾マスはスキップ（自動で開かない）
+            // 既に開かれている
             if index == -1 || self.table[index as usize].is_bom() ||
-               self.table[index as usize].getstat() != 0 {
+               self.table[index as usize].is_open() {
                 continue;
             }
 
@@ -191,11 +307,16 @@ impl GameTable {
     //------------------------------
     // 自動的に判別し危険マス／安全マスにフラグを立てる
     //------------------------------
-    fn auto_flag (&mut self) {
+    pub fn auto_flag (&mut self) {
         let mut is_update= false;
 
+        // 一旦全部のフラグを消去する
+        for index in 0..self.width * self.height {
+            self.table[index as usize].set_autoflag(0);
+        }        
+
         // 無限ループを考慮して、最大１０回志向する
-        for _ in 0..10 {
+        for _ in 0..1 {
             is_update = false;
 
             // 危険マスを判定
@@ -216,9 +337,6 @@ impl GameTable {
                 break;
             }
         }
-        if is_update {
-            println!("試行回数に達した");
-        }
     }
  
     //------------------------------
@@ -229,25 +347,24 @@ impl GameTable {
         let cursol_index = get_index(cursol_x, cursol_y, self.width, self.height);
 
         // 開いていないマスは対象外
-        if self.table[cursol_index as usize].getstat() == 0 {
+        if !self.table[cursol_index as usize].is_open() {
             return is_update;
         }
 
         // 周囲マスのインデックスを取得
-        let around = self.table[cursol_index as usize].get_around();
+        let around = self.table[cursol_index as usize].get_around_tbl();
 
         // 周囲の開いていないパネルを数える
         let mut close_list:Vec<i32> = Vec::new();
         for index in around.into_iter().flatten() {
-            // 有効範囲外はスキップ
-            if index == -1 {
+            // 有効範囲外はまたは開いているパネルはスキップ
+            if index == -1 || self.table[index as usize].is_open() {
                 continue;
             }
-            
+
             // 周囲の閉じているパネルのインデックスを保持
             // 安全フラグのパネルは除外
-            if self.table[index as usize].getstat() == 0 && 
-               self.table[index as usize].get_autoflag() != 2 {
+            if self.table[index as usize].get_autoflag() != 2 {
                 close_list.push(index);
             }
         }
@@ -276,12 +393,12 @@ impl GameTable {
 
         // 周囲に爆弾なしあるいは未開封パネルの場合はないもしない
         if self.table[cursol_index as usize].get_around_num() == 0 ||
-           self.table[cursol_index as usize].getstat() == 0 {
+           !self.table[cursol_index as usize].is_open() {
             return is_update
         }
 
         // 周囲マスのインデックスを取得
-        let around = self.table[cursol_index as usize].get_around();
+        let around = self.table[cursol_index as usize].get_around_tbl();
 
         // 周囲の開いていないパネルと危険マスを数える
         let mut close_list:Vec<i32> = Vec::new();
@@ -295,7 +412,7 @@ impl GameTable {
             // 危険フラグが立っている場合爆弾数としてカウント
             if self.table[index as usize].get_autoflag() == 1 {
                 bomnum += 1;
-            } else if self.table[index as usize].getstat() == 0 &&
+            } else if !self.table[index as usize].is_open() &&
                       self.table[index as usize].get_autoflag() != 2 {
                 // 周囲の閉じているパネルのインデックスを保持
                 close_list.push(index);
@@ -323,18 +440,7 @@ impl GameTable {
     //------------------------------
     pub fn draw_panel(&self) {
         for panel in &self.table {
-            panel.draw_panel();
+            panel.draw_panel(self.cursol_x, self.cursol_y);
         }
     }
-}
-
-//------------------------------
-// 座標をインデックスへ変換
-//------------------------------
-fn get_index(cursol_x:i32, cursol_y:i32, width:i32, height:i32) -> i32 {
-    if cursol_x < 0 || cursol_x >= width ||
-       cursol_y < 0 || cursol_y >= height {
-        return -1;
-       }
-    cursol_y * width + cursol_x
 }

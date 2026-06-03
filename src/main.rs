@@ -1,4 +1,5 @@
 use macroquad::prelude::*;
+mod utils;
 mod panel;
 mod gamemain;
 use gamemain::GameMain;

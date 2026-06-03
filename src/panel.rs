@@ -1,21 +1,24 @@
 use macroquad::prelude::*;
 use crate::{PANEL_WIDTH,PANEL_HEIGHT,WALL_LEFT,WALL_TOP};
+use crate::utils::*;
 
 // パネル情報
 use crate::{PANEL_COL_CLOSE,PANEL_COL_OPEN,PANEL_COL_DANGER,PANEL_COL_SAFETY,PALNE_FONT_SIZE};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 // 盤面のオブジェクト
 pub struct Panel {
-    dbgflg: i32,                            // デバッグ用
     stat: i32,                              // 0=閉／1=開
-    around_num: i32,                        // 周りの爆弾数
-    isbom: bool,                            // 爆弾有無
-    user_flg: i32,                          // 0=なし/1=確定フラグ/2=暫定フラグ
-    auto_flg: i32,                          // 0=なし/1=危険フラグ/2=安全フラグ
     pos_x: i32,                             // 自分の横座標
     pos_y: i32,                             // 自分の縦座標
-    around: [[i32; 3];3],                   // カーソル周囲９マスのテーブル位置
+    index: i32,                             // 自分の配列番号
+    around_tbl: [[i32; 3];3],               // カーソル周囲９マスのテーブル位置
+    around_num: i32,                        // 周りの爆弾数
+    isbom: bool,                            // 爆弾有無
+    isbold: bool,                           // 太字表示
+    user_flg: i32,                          // 0=なし/1=確定フラグ/2=暫定フラグ
+    auto_flg: i32,                          // 0=なし/1=危険フラグ/2=安全フラグ
+    dbgflg: i32,                            // デバッグ用
 }
 
 // 実装
@@ -24,21 +27,25 @@ impl Panel {
     // パネルの初期化
     //------------------------------
     pub fn new(pos_x: i32, pos_y: i32, width: i32, height: i32) -> Panel {
+        let index = get_index(pos_x, pos_y, width, height);
         let mut panel = Panel {
-            dbgflg: 0,
             stat: 0,
-            around_num: 0,
-            isbom: false,
-            user_flg: 0,
-            auto_flg: 0,
             pos_x,
             pos_y,
-            around: [[-1;3];3],
+            index,
+            isbom: false,
+            isbold: false,
+            around_num: 0,
+            user_flg: 0,
+            auto_flg: 0,
+            around_tbl: [[-1;3];3],
+            dbgflg: 0,
         };
+
         // 周囲のインデックスを求める
         for y in 0..3 {
             for x in 0..3 {
-                panel.around[y][x] = get_index(
+                panel.around_tbl[y][x] = get_index(
                     pos_x + x as i32 - 1, pos_y + y as i32 - 1,
                     width, height);
             }
@@ -47,18 +54,25 @@ impl Panel {
     }
 
     //------------------------------
-    // 周囲のインデックステーブルを返却（コピー）
-    //------------------------------
-    pub fn get_around(&self) -> [[i32; 3]; 3] {
-        self.around
-    }
-
-    //------------------------------
     // パネルのオープン処理
     //------------------------------
     pub fn open(&mut self) {
         self.stat = 1;
         self.auto_flg = 0;
+    }
+
+    //------------------------------
+    // パネルのオープン処理
+    //------------------------------
+    pub fn is_open(&self) -> bool {
+        self.stat == 1
+    }
+
+    //------------------------------
+    // 周囲のインデックステーブルを返却（コピー）
+    //------------------------------
+    pub fn get_around_tbl(&self) -> [[i32; 3]; 3] {
+        self.around_tbl
     }
 
     //------------------------------
@@ -76,11 +90,40 @@ impl Panel {
     }
 
     //------------------------------
+    // 強調表示オン
+    //------------------------------
+    pub fn bold_on(&mut self) {
+        self.isbold = true;
+    }
+
+    //------------------------------
+    // 強調表示オフ
+    //------------------------------
+    pub fn bold_off(&mut self) {
+        self.isbold = false;
+    }
+
+    //------------------------------
+    // 周囲の爆弾が確定しているか
+    //------------------------------
+    pub fn is_bold(&self) -> bool {
+        self.isbold == true
+    }
+
+    //------------------------------
     // ユーザのフラグを立てる
     //------------------------------
     pub fn set_userflag(&mut self) {
         self.user_flg = (self.user_flg + 1) % 3;
     }
+
+    //------------------------------
+    // ユーザのフラグを立てる
+    //------------------------------
+    pub fn is_userflag(&self) -> bool {
+        self.user_flg != 0
+    }
+
 
     pub fn setflg(&mut self, flg: i32) {
         self.dbgflg = flg;
@@ -89,9 +132,9 @@ impl Panel {
     //------------------------------
     // 状態を返却する
     //------------------------------
-    pub fn getstat(&self) -> i32 {
-        self.stat
-    }
+//    pub fn getstat(&self) -> i32 {
+//        self.stat
+//    }
 
     //------------------------------
     // 周囲の爆弾数を返却する
@@ -128,29 +171,39 @@ impl Panel {
     //------------------------------
     // 自分自身を描画
     //------------------------------
-    pub fn draw_panel(&self) {
+    pub fn draw_panel(&self, cursol_x: i32, cursol_y: i32) {
+        // 描画位置を算出
         let left = self.pos_x as f32 * PANEL_WIDTH + WALL_LEFT;
         let top = self.pos_y as f32 * PANEL_HEIGHT + WALL_TOP;
-        let mut panelcolor = PANEL_COL_CLOSE;
-        let font_size= PALNE_FONT_SIZE as f32;
 
+        // 描画に関する基本情報を設置
+        let font_size= PALNE_FONT_SIZE as f32;
         let mut height = 2.0;
+        let mut panelcolor = PANEL_COL_CLOSE;
         if self.stat == 1 {
             height = 1.0;
             panelcolor = PANEL_COL_OPEN;
-            }
+        }
+
+        // カーソルの周囲９マス範囲にあるか
+        let is_cursol_around =  (cursol_x - self.pos_x).abs() <= 1 &&
+           (cursol_y - self.pos_y).abs() <= 1;
 
         // 色を決める
-        if self.auto_flg == 1 {
-            panelcolor = PANEL_COL_DANGER;
-        } else if self.auto_flg == 2 {
-            panelcolor = PANEL_COL_SAFETY;
+        if is_cursol_around {
+            if self.auto_flg == 1 {
+                panelcolor = PANEL_COL_DANGER;
+            } else if self.auto_flg == 2 {
+                panelcolor = PANEL_COL_SAFETY;
+            }
+/*
         } else if self.dbgflg == 1 {
             if self.stat == 0 {
                 panelcolor = Color::from_rgba(255, 255, 128, 255);
             } else {
                 panelcolor = Color::from_rgba(240, 240, 100, 255);
             }
+ */
         }
 
         // 下地を描く
@@ -163,9 +216,9 @@ impl Panel {
         // パネルを描く
         draw_rectangle(left + height,top + height,
             PANEL_WIDTH - height * 2.0, PANEL_HEIGHT - height * 2.0,
-            panelcolor);
+           panelcolor);
 
-        // フラグが立っているなら表示
+        // 旗が立っているなら表示
         if self.stat == 0 && self.user_flg != 0 {
             let mut flag_col = RED;
             if self.user_flg == 2 {
@@ -192,18 +245,14 @@ impl Panel {
         // 周囲の爆弾数の表示
         if self.around_num > 0 {
             let text = format!("{}", self.around_num);
-            draw_text(text, left + 5.0, top + 20.0, font_size, RED);
+            // カーソル周囲９マスいないで強調表示(一旦力業)
+            if self.isbold && is_cursol_around {
+                draw_text(&text, left + 4.0, top + 20.0, font_size, BLACK);
+                draw_text(&text, left + 5.0, top + 19.0, font_size, BLACK);
+                draw_text(&text, left + 5.0, top + 21.0, font_size, BLACK);
+                draw_text(&text, left + 6.0, top + 20.0, font_size, BLACK);
+            }
+            draw_text(&text, left + 5.0, top + 20.0, font_size, RED);
         }
     }
-}
-
-//------------------------------
-// 座標をインデックスへ変換
-//------------------------------
-fn get_index(cursol_x:i32, cursol_y:i32, width:i32, height:i32) -> i32 {
-    if cursol_x < 0 || cursol_x >= width ||
-       cursol_y < 0 || cursol_y >= height {
-        return -1;
-       }
-    cursol_y * width + cursol_x
 }

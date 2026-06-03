@@ -1,4 +1,5 @@
 use macroquad::prelude::*;
+use crate::utils::*;
 use crate::gametable::GameTable;
 use crate::{PANEL_WIDTH,PANEL_HEIGHT,WALL_LEFT,WALL_TOP};
 use crate::LAYOUT_COLOR;
@@ -100,10 +101,21 @@ impl GameMain {
     // カーソル位置の処理
     //------------------------------
     pub fn playcontrol(&mut self) {
-        // やり直し処理
+        // UNDO 処理
         if is_key_pressed(KeyCode::Up) {
-            self.table.tableUndo();
+            // UNDO情報の最新＝現在なので、UNDO中でなければ
+            // １回余計に UNDO する
+            if !self.table.is_useundo() {
+                self.table.table_undo();
+            }
+            self.table.table_undo();
             self.stat = 2;
+            return;
+        }
+
+        // REDO 処理
+        if is_key_pressed(KeyCode::Down) {
+            self.table.table_redo();
             return;
         }
 
@@ -116,19 +128,33 @@ impl GameMain {
         // カーソル位置が盤面からはみ出さないよう制御
         self.cursol_x = cursol_x.clamp(0, self.width - 1);
         self.cursol_y = cursol_y.clamp(0, self.height - 1);
+        self.table.set_cursol(self.cursol_x, self.cursol_y);
+
+        let mut is_update = false;
 
         // マウスクリック判定（左）
-        self.click_tbl_left();
+        is_update |= self.click_tbl_left();
 
         // マウスクリック判定（右）
-//        self.click_tbl_right();
+        is_update |= self.click_tbl_right();
 
-        // 危険マス・安全マスの自動判定
-//        self.auto_flag();
+        // 更新が発生した場合
+        if is_update {
+            // サポート情報を設定する
+            self.table.update_compflg();
+            self.table.auto_flag();
+            // 今の盤面を保存する
+            self.table.undo_push();
+            // 爆弾が開かれた場合はステータスを変える
+            if self.table.open_bomnum() > 0 {
+                self.stat = 3;
+            }
+        }
     }
 
     //------------------------------
     // 盤面右クリック処理
+    // 変更があった場合 true、ない場合は false を返す
     //------------------------------
     fn click_tbl_right (&mut self) -> bool {
 
@@ -138,61 +164,39 @@ impl GameMain {
             return false
         }
 
-        // フラグ処理を行う
-//        if let Some(tgt_panel) = self.table.getpanel_idx(self.cursol_index) {
-//            tgt_panel.set_userflag();
-//        }
-        true
+        // クリックしたことを盤面に伝える
+        let result = self.table.click_right(self.cursol_x, self.cursol_y);
+        result
     }
 
     //------------------------------
     // 盤面左クリック処理
+    // 変更があった場合 true、ない場合は false を返す
     //------------------------------
-    fn click_tbl_left (&mut self) {
+    fn click_tbl_left (&mut self) -> bool {
         // マウス左クリックされていない、マウスが盤面上ではない、なら何もしない
         if !is_mouse_button_pressed(MouseButton::Left) ||
            self.cursol_index == -1 {
-            return
+            return false
         }
 
         // ゲームが待機中なら初期化しなおす
         if self.stat == 3 {
             self.initial_game();
             self.stat = 1;
-            return;
+            return true
         }
+
         // ゲームは開始し、クリック待ちなら爆弾を生成する
         if self.stat == 1 {
             self.table.setting_bom(self.bom_num, self.cursol_x, self.cursol_y);
+            // 今の盤面を保存する
+            self.table.undo_push();
             self.stat = 2;
         }
         
-        // UNDO情報を作成し
-        self.table.undo_push();
-
         // クリックしたことを盤面に伝える
         let result = self.table.click_left(self.cursol_x, self.cursol_y);
-
-        // 更新がなかった場合、作成したUNDO情報を破棄
-        if !result {
-            self.table.undo_remove();
-            return
-        }
-
-        // 爆弾が開かれた場合はステータスを変える
-        if self.table.open_bomnum() > 0 {
-            self.stat = 3;
-        }
+        result
     }
-}
-
-//------------------------------
-// 座標をインデックスへ変換
-//------------------------------
-fn get_index(cursol_x:i32, cursol_y:i32, width:i32, height:i32) -> i32 {
-    if cursol_x < 0 || cursol_x >= width ||
-       cursol_y < 0 || cursol_y >= height {
-        return -1;
-       }
-    cursol_y * width + cursol_x
 }
