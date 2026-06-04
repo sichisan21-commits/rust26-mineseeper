@@ -1,4 +1,5 @@
 mod myconst;
+mod chkbox;
 mod utils;
 mod panel;
 mod gamemain;
@@ -16,10 +17,10 @@ async fn main() {
 
     let width = 20;
     let height = 20;
-    let bom_num = width * height * 15 /100;
+    let bom_num = width * height * 20 /100;
 
     let mut game_data = GameMain::new();
-    game_data.set_gameinfo(height, width, bom_num);
+    game_data.set_gameinfo(width, height, bom_num);
     game_data.initial_game();
     loop {
         clear_background(WHITE);

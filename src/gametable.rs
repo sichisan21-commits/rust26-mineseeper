@@ -11,6 +11,7 @@ pub struct GameTable {
     cursol_index: i32,                      // カーソル位置の配列番号
     num_bom: i32,                           // 爆弾の数
     table: Vec<Panel>,                      // 盤面データ
+    table_backup: Vec<Panel>,                 // 盤面バックアップ
     table_undo: Vec<Vec<Panel>>,            // 盤面データ（履歴）
     useundo: usize,                         // 使用されるundo番号
 }
@@ -31,6 +32,7 @@ impl GameTable {
             cursol_index: 0,
             num_bom: 0,
             table: Vec::new(),
+            table_backup: Vec::new(),
             table_undo: Vec::new(),
             useundo: 0,
         }
@@ -53,6 +55,16 @@ impl GameTable {
     }
 
     //------------------------------
+    // 開かれたパネルの数を取得
+    //------------------------------
+    pub fn get_opennum(&self) -> usize {
+        self.table
+            .iter()
+            .filter(|p| p.is_open())
+            .count()
+    }
+
+    //------------------------------
     // カーソル位置をセットする
     //------------------------------
     pub fn set_cursol(&mut self, cursol_x:i32, cursol_y:i32, cursol_index:i32) {
@@ -64,7 +76,7 @@ impl GameTable {
     //------------------------------
     // 爆弾を配置する
     //------------------------------
-    pub fn setting_bom(&mut self, num_bom: i32, cursol_x: i32, cursol_y: i32) {
+    pub fn setting_bom(&mut self, num_bom: i32) {
         self. num_bom = num_bom;
 
         // 爆弾をランダム生成する
@@ -75,7 +87,7 @@ impl GameTable {
                 let land_y = rand::gen_range(0, self.height);
 
                 // カーソル位置と一致する位置には配置しない
-                if land_x == cursol_x && land_y == cursol_y {
+                if land_x == self.cursol_x && land_y == self.cursol_y {
                     continue;
                 }
 
@@ -110,6 +122,21 @@ impl GameTable {
             }
         }
         true
+    }
+
+    //------------------------------
+    // 盤面のバックアップ
+    //------------------------------
+    pub fn tbl_backup(&mut self) {
+        self.table_backup = self.table.clone();
+    }
+
+    //------------------------------
+    // バックアップから復帰
+    //------------------------------
+    pub fn tbl_restore(&mut self) {
+        self.table = self.table_backup.clone();
+        self.table_backup.clear();
     }
 
     //------------------------------
@@ -175,25 +202,22 @@ impl GameTable {
     // 左クリック処理
     // 変更があった場合 true、ない場合は false を返す
     //------------------------------
-    pub fn click_left(&mut self, cursol_x: i32, cursol_y: i32) -> bool {
-        // 座標をインデックスに変換
-        let cursol_index = get_index(cursol_x, cursol_y, self.width, self.height);
- 
+    pub fn click_left(&mut self) -> bool { 
         // クリック位置が盤面外、あるいはすでに開かれているなら何もしない
-        if cursol_index == -1 || self.table[cursol_index as usize].is_open() {
+        if self.cursol_index == -1 || self.table[self.cursol_index as usize].is_open() {
             return false
         }
 
         // クリック位置を開く
-        self.table[cursol_index as usize].open();
+        self.table[self.cursol_index as usize].open();
         
         // クリック位置が爆弾の場合終了
-        if self.table[cursol_index as usize].is_bom() {
+        if self.table[self.cursol_index as usize].is_bom() {
             return true
         }
 
         // クリック位置からパネルを連鎖的に開く
-        self.openchain(cursol_index);
+        self.openchain(self.cursol_index);
         true
     }
 
@@ -201,40 +225,43 @@ impl GameTable {
     // 左クリック処理
     // 変更があった場合 true、ない場合は false を返す
     //------------------------------
-    pub fn click_right(&mut self, cursol_x: i32, cursol_y: i32) -> bool {
+    pub fn click_right(&mut self) -> bool {
         // 座標をインデックスに変換
-        let cursol_index = get_index(cursol_x, cursol_y, self.width, self.height);
- 
         // クリック位置が盤面外、あるいはすでに開かれているなら何もしない
-        if cursol_index == -1 || self.table[cursol_index as usize].is_open() {
+        if self.cursol_index == -1 || self.table[self.cursol_index as usize].is_open() {
             return false
         }
 
         // 旗の操作
-        self.table[cursol_index as usize].set_userflag();
+        self.table[self.cursol_index as usize].set_userflag();
         true
     }
 
     //------------------------------
     // 全ての補助フラグをクリアする
     //------------------------------
-    pub fn clear_help(&mut self) {
+    pub fn clear_help(&mut self, helplv:i32) {
         for index in 0..self.width * self.height {
             self.table[index as usize].bold_off();
-            self.table[index as usize].set_autoflag(AutoSts::None);
+            if helplv == 0 {
+                self.table[index as usize].set_autoflag(AutoSts::None);
+            } else {
+                self.table[index as usize].set_autoflag(AutoSts::Unknown);
+            }
         }
     }
 
     //------------------------------
     // 強調表示オン
     //------------------------------
-    pub fn set_bold(&mut self) {
+    pub fn set_bold(&mut self, is_panel_bold: bool, is_dang_on: bool, is_safe_on: bool) {
+        // 旗が立てられる可能性のあるマスの強調表示
         for index in 0..self.width * self.height {
             // パネルは開いていて、周囲の爆弾数が１以上なら
             // 強調判定
             if self.table[index as usize].is_open() &&
                self.table[index as usize].get_around_num() > 0 {
-                self.update_bold(index);
+                self.update_bold(is_panel_bold, is_dang_on, is_safe_on, index);
             }
         }
     }
@@ -242,7 +269,7 @@ impl GameTable {
     //------------------------------
     // 指定マスの周囲９マスをチェックし、旗が立てられそうなら強調表示する
     //------------------------------
-    fn update_bold(&mut self, cursol_index:i32) {
+    fn update_bold(&mut self, is_panel_bold: bool, _is_dang_on: bool, is_safe_on: bool, cursol_index:i32) {
         // カーソルの周囲９マスをチェックする
         let around = self.table[cursol_index as usize].get_around_tbl();      
 
@@ -276,21 +303,27 @@ impl GameTable {
             }
         }
 
-        // フラグが正しく立てられていて爆弾数と一致している場合
-        // 安全マスとしてフラグを立てる
         let around_num = self.table[cursol_index as usize].get_around_num();
-        if close_cnt > around_num && flag_cnt == around_num && miss_cnt == 0 {
-            for index in close_list {
-                self.table[index as usize].set_autoflag(AutoSts::Safety);                
+
+        // 強調表示オン
+        if is_panel_bold {
+            // 周囲の爆弾の数と未開封のマスの数が一致していて
+            // 旗の数が一致していない場合強調表示
+            if close_cnt == around_num &&
+               (flag_cnt != around_num || miss_cnt > 0) {
+                self.table[cursol_index as usize].bold_on();
             }
-            return
         }
 
-        // 周囲の爆弾の数と未開封のマスの数が一致していて
-        // 旗の数が一致していない場合強調表示
-        if close_cnt == around_num &&
-           (flag_cnt != around_num || miss_cnt > 0) {
-            self.table[cursol_index as usize].bold_on();
+        // 安全マス表示オン
+        if is_safe_on {
+            // フラグが正しく立てられていて爆弾数と一致している場合
+            // 安全マスとしてフラグを立てる
+            if close_cnt > around_num && flag_cnt == around_num && miss_cnt == 0 {
+                for index in close_list {
+                    self.table[index as usize].set_autoflag(AutoSts::Safety);                
+                }
+            }
         }
     }
 
@@ -326,16 +359,11 @@ impl GameTable {
     //------------------------------
     // 自動的に判別し危険マス／安全マスにフラグを立てる
     //------------------------------
-    pub fn _auto_flag (&mut self) {
-        let mut is_update= false;
-
-        // 一旦全部のフラグを消去する
-        for index in 0..self.width * self.height {
-            self.table[index as usize].set_autoflag(AutoSts::None);
-        }        
+    pub fn auto_flag (&mut self, _is_dang_on: bool, is_safe_on: bool) {
+        let mut is_update;
 
         // 無限ループを考慮して、最大１０回試行する
-        for _ in 0..1 {
+        for _ in 0..10 {
             is_update = false;
 
             // 危険マスを判定
@@ -356,6 +384,16 @@ impl GameTable {
                 break;
             }
         }
+
+        // 安全フラグ非表示の場合、安全マスを消す
+        if !is_safe_on {
+            for index in 0..self.width * self.height {
+                if self.table[index as usize].get_autoflag() == AutoSts::Safety {
+                    self.table[index as usize].set_autoflag(AutoSts::Unknown);
+                }
+            }
+        }
+
     }
  
     //------------------------------
@@ -458,8 +496,28 @@ impl GameTable {
     // 盤面を描画する
     //------------------------------
     pub fn draw_panel(&self) {
+
+        // 立っている旗の数を取得
+        let flag_num = self.table
+            .iter()
+            .filter(|p| p.is_redflag())
+            .count();
+        let close_num = self.table
+            .iter()
+            .filter(|p| !p.is_open())
+            .count();
+
+        let mut pos_y = 1;
+        pos_y += 1; drawtextln(&format!("SIZE: {} x {}",self.width, self.height), 1, pos_y, BLACK);
+        pos_y += 1; drawtextln(&format!("BOMB: {}",self.num_bom), 1, pos_y, BLACK);
+        pos_y += 1; drawtextln(&format!("CLOSE PANEL: {}",close_num), 1, pos_y, BLACK);
+        pos_y += 1; drawtextln(&format!("REDFLAG: {}",flag_num), 1, pos_y, BLACK);
+
+        // 盤面を表示
         for panel in &self.table {
             panel.draw_panel(self.cursol_x, self.cursol_y);
         }
+
     }
 }
+

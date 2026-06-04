@@ -16,8 +16,9 @@ pub enum PanelSts {                         // パネルの状態
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AutoSts {                          // 自動判定フラグ
     None,                                   // なにもなし
-    Safety,                                  // 安全マス
+    Safety,                                 // 安全マス
     Danger,                                 // 危険マス
+    Unknown,                                // 不明
 }
 
 //----------------------------------------
@@ -103,6 +104,13 @@ impl Panel {
     }
 
     //------------------------------
+    // 赤の旗であるか
+    //------------------------------
+    pub fn is_redflag(&self) -> bool {
+        self.panel_sts == PanelSts::RedFlg
+    }
+
+    //------------------------------
     // 周囲のインデックステーブルを返却（コピー）
     //------------------------------
     pub fn get_around_tbl(&self) -> [[i32; 3]; 3] {
@@ -136,20 +144,6 @@ impl Panel {
     pub fn bold_off(&mut self) {
         self.isbold = false;
     }
-
-    //------------------------------
-    // 周囲の爆弾が確定しているか
-    //------------------------------
-    pub fn is_bold(&self) -> bool {
-        self.isbold == true
-    }
-
-    //------------------------------
-    // 状態を返却する
-    //------------------------------
-//    pub fn getstat(&self) -> i32 {
-//        self.stat
-//    }
 
     //------------------------------
     // 周囲の爆弾数を返却する
@@ -234,7 +228,7 @@ impl Panel {
            panelcolor);
 
         // パネルの文字を描く
-        self.draw_text_close(left, top);
+        self.draw_text_close(left, top, is_cursol_around);
     }
 
     //------------------------------
@@ -281,24 +275,26 @@ impl Panel {
         // 爆弾数の表示
         if self.around_num > 0 {
             let text = format!("{}", self.around_num);
+            let text_col = from_number(self.around_num);
 
             // 強調表示（一旦力業）
             if self.isbold && is_cursol_around {
-                draw_text(&text, left + 3.0, top + 18.0, PALNE_FONT_SIZE, WHITE);
-                draw_text(&text, left + 4.0, top + 18.0, PALNE_FONT_SIZE, WHITE);
-                draw_text(&text, left + 5.0, top + 18.0, PALNE_FONT_SIZE, WHITE);
-                draw_text(&text, left + 5.0, top + 21.0, PALNE_FONT_SIZE, BLACK);
-                draw_text(&text, left + 6.0, top + 21.0, PALNE_FONT_SIZE, BLACK);
-                draw_text(&text, left + 7.0, top + 21.0, PALNE_FONT_SIZE, BLACK);
+                draw_text(&text, left + 3.0, top + 18.0, PANEL_FONT_SIZE, WHITE);
+                draw_text(&text, left + 4.0, top + 18.0, PANEL_FONT_SIZE, WHITE);
+                draw_text(&text, left + 5.0, top + 18.0, PANEL_FONT_SIZE, WHITE);
+                draw_text(&text, left + 5.0, top + 22.0, PANEL_FONT_SIZE, BLACK);
+                draw_text(&text, left + 6.0, top + 22.0, PANEL_FONT_SIZE, BLACK);
+                draw_text(&text, left + 7.0, top + 22.0, PANEL_FONT_SIZE, BLACK);
             }
-            draw_text(&text, left + 5.0, top + 20.0, PALNE_FONT_SIZE, RED);
+            draw_text(&text, left + 5.0, top + 20.0, PANEL_FONT_SIZE, text_col);
+            draw_text(&text, left + 6.0, top + 20.0, PANEL_FONT_SIZE, text_col);
         }
     }
 
      //------------------------------
     // パネルの文字を描画（閉じている）
     //------------------------------
-    fn draw_text_close(&self, left: f32, top:f32) {
+    fn draw_text_close(&self, left: f32, top:f32, is_cursol_around: bool) {
         // 開いていればなにもしない
         if self.panel_sts == PanelSts::Open {
             return
@@ -310,8 +306,31 @@ impl Panel {
             if self.panel_sts == PanelSts::BlueFlg {
                 flag_col = BLUE;
             }
-            draw_text("F", left + 7.0, top + 20.0, PALNE_FONT_SIZE, BLACK);
-            draw_text("F", left + 5.0, top + 19.0, PALNE_FONT_SIZE, flag_col);
+            draw_text("F", left + 7.0, top + 20.0, PANEL_FONT_SIZE, BLACK);
+            draw_text("F", left + 5.0, top + 19.0, PANEL_FONT_SIZE, flag_col);
+        } else {
+            // 判明していないパネルなら？を表示
+            if self.auto_flg == AutoSts::Unknown && is_cursol_around {
+                draw_text("?", left + 6.0, top + 20.0, PANEL_FONT_SIZE, GRAY);
+                draw_text("?", left + 5.0, top + 20.0, PANEL_FONT_SIZE, GRAY);
+            }
         }
+    }
+}
+
+//---------------------------------------------
+// 爆弾数に応じた色を表示する
+//---------------------------------------------
+pub fn from_number(n: i32) -> Color {
+    match n {
+        1 => BLUE,
+        2 => GREEN,
+        3 => RED,
+        4 => DARKBLUE,
+        5 => BROWN,
+        6 => WHITE,
+        7 => BLACK,
+        8 => GRAY,
+        _ => BLACK, // 0 や範囲外は黒など
     }
 }
