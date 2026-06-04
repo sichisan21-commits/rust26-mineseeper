@@ -1,20 +1,29 @@
 use macroquad::prelude::*;
-use crate::{PANEL_WIDTH,PANEL_HEIGHT,WALL_LEFT,WALL_TOP};
 use crate::utils::*;
+use crate::myconst::*;
 
-// パネル情報
-use crate::{PANEL_COL_CLOSE,PANEL_COL_OPEN,PANEL_COL_DANGER,PANEL_COL_SAFETY,PALNE_FONT_SIZE};
-
+//----------------------------------------
+// enum
+//----------------------------------------
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PanelSts {
+pub enum PanelSts {                         // パネルの状態
     Close,                                  // 閉じている
     Open,                                   // 開いている
     RedFlg,                                 // 旗（赤）
     BlueFlg,                                // 旗（青）
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AutoSts {                          // 自動判定フラグ
+    None,                                   // なにもなし
+    Safety,                                  // 安全マス
+    Danger,                                 // 危険マス
+}
+
+//----------------------------------------
 // 盤面のオブジェクト
+//----------------------------------------
+#[derive(Clone, PartialEq, Eq)]
 pub struct Panel {
     panel_sts: PanelSts,                    // パネルの状態
     pos_x: i32,                             // 自分の横座標
@@ -24,8 +33,7 @@ pub struct Panel {
     around_num: i32,                        // 周りの爆弾数
     isbom: bool,                            // 爆弾有無
     isbold: bool,                           // 太字表示
-    auto_flg: i32,                          // 0=なし/1=危険フラグ/2=安全フラグ
-    dbgflg: i32,                            // デバッグ用
+    auto_flg: AutoSts,                      // 自動判定フラグ
 }
 
 // 実装
@@ -43,9 +51,8 @@ impl Panel {
             isbom: false,
             isbold: false,
             around_num: 0,
-            auto_flg: 0,
+            auto_flg: AutoSts::None,
             around_tbl: [[-1;3];3],
-            dbgflg: 0,
         };
 
         // 周囲のインデックスを求める
@@ -64,7 +71,7 @@ impl Panel {
     //------------------------------
     pub fn open(&mut self) {
         self.panel_sts = PanelSts::Open;
-        self.auto_flg = 0;
+        self.auto_flg = AutoSts::None;
     }
 
     //------------------------------
@@ -105,14 +112,14 @@ impl Panel {
     //------------------------------
     // ゲームの自動判定フラグセット
     //------------------------------
-    pub fn set_autoflag(&mut self, flg: i32) {
+    pub fn set_autoflag(&mut self, flg: AutoSts) {
         self.auto_flg = flg;
     }
 
     //------------------------------
     // ゲームの自動判定フラグ取得
     //------------------------------
-    pub fn get_autoflag(&self) -> i32{
+    pub fn get_autoflag(&self) -> AutoSts{
         self.auto_flg
     }
 
@@ -135,10 +142,6 @@ impl Panel {
     //------------------------------
     pub fn is_bold(&self) -> bool {
         self.isbold == true
-    }
-
-    pub fn setflg(&mut self, flg: i32) {
-        self.dbgflg = flg;
     }
 
     //------------------------------
@@ -184,104 +187,131 @@ impl Panel {
     // 自分自身を描画
     //------------------------------
     pub fn draw_panel(&self, cursol_x: i32, cursol_y: i32) {
-        // 描画位置を算出
-        let left = self.pos_x as f32 * PANEL_WIDTH + WALL_LEFT;
-        let top = self.pos_y as f32 * PANEL_HEIGHT + WALL_TOP;
-
-        // 描画に関する基本情報を設置
-        let font_size= PALNE_FONT_SIZE as f32;
-        let mut height = 2.0;
-        let mut panelcolor = PANEL_COL_CLOSE;
-        if self.panel_sts == PanelSts::Open {
-            height = 1.0;
-            panelcolor = PANEL_COL_OPEN;
-        }
-
-        // カーソルの周囲９マス範囲にあるか
         let is_cursol_around =  (cursol_x - self.pos_x).abs() <= 1 &&
            (cursol_y - self.pos_y).abs() <= 1;
 
-        // 色を決める
-        if is_cursol_around {
-            if self.auto_flg == 1 {
-                panelcolor = PANEL_COL_DANGER;
-            } else if self.auto_flg == 2 {
-                panelcolor = PANEL_COL_SAFETY;
-            }
-/*
-        } else if self.dbgflg == 1 {
-            if self.stat == 0 {
-                panelcolor = Color::from_rgba(255, 255, 128, 255);
-            } else {
-                panelcolor = Color::from_rgba(240, 240, 100, 255);
-            }
- */
-        }
+        // 描画位置を算出
+        let left = self.pos_x as f32 * PANEL_WIDTH + WALL_LEFT;
+        let top = self.pos_y as f32 * PANEL_HEIGHT + WALL_TOP;
 
         // 下地を描く
         draw_rectangle(left,top,
             PANEL_WIDTH, PANEL_HEIGHT,
             BLACK);
         draw_rectangle(left,top,
-            PANEL_WIDTH - height, PANEL_HEIGHT - height,
+            PANEL_WIDTH - PANEL_THICK, PANEL_HEIGHT - PANEL_THICK,
             WHITE);
+
         // パネルを描く
-        draw_rectangle(left + height,top + height,
-            PANEL_WIDTH - height * 2.0, PANEL_HEIGHT - height * 2.0,
+        self.draw_panel_close(left, top, is_cursol_around);
+        self.draw_panel_open(left, top, is_cursol_around);
+    }
+
+    //------------------------------
+    // 閉じているパネルの描画
+    //------------------------------
+    fn draw_panel_close(&self, left:f32, top: f32, is_cursol_around: bool){
+        // 開いているなら何もしない
+        if self.panel_sts == PanelSts::Open {
+            return
+        }
+
+        // デフォルトの描画色を設定
+        let mut panelcolor = PANEL_COL_CLOSE;
+
+        // カーソルの周囲であればヘルプ表示色の設定
+        if is_cursol_around {
+            if self.auto_flg == AutoSts::Danger {
+                panelcolor = PANEL_COL_DANGER;
+            } else if self.auto_flg == AutoSts::Safety {
+                panelcolor = PANEL_COL_SAFETY;
+            }
+        }
+
+        // パネルの表面を描く
+        draw_rectangle(left + PANEL_THICK,top + PANEL_THICK,
+            PANEL_WIDTH - PANEL_THICK * 2.0, PANEL_HEIGHT - PANEL_THICK * 2.0,
            panelcolor);
 
-        // 旗が立っているなら表示
+        // パネルの文字を描く
+        self.draw_text_close(left, top);
+    }
+
+    //------------------------------
+    // 閉じているパネルの描画
+    //------------------------------
+    fn draw_panel_open(&self, left:f32, top: f32, is_cursol_around: bool){
+        // 閉じているなら何もしない
+        if self.panel_sts != PanelSts::Open {
+            return
+        }
+
+        // 表面の色を設定
+        let mut panel_col = PANEL_COL_OPEN;
+        if self.isbom {
+            panel_col = RED;
+        }
+
+        // パネルの表面を描く
+        let panel_thick = 1.0;
+        draw_rectangle(left + panel_thick,top + panel_thick,
+            PANEL_WIDTH - panel_thick * 2.0, PANEL_HEIGHT - panel_thick * 2.0,
+           panel_col);
+
+        // 爆弾マスの場合爆弾を表示
+        if self.isbom {
+            draw_circle(left + PANEL_WIDTH as f32 / 2.0,top + PANEL_WIDTH as f32 / 2.0,
+            PANEL_WIDTH as f32 / 2.0 - 5.0,BLACK);
+            return;
+        }
+        
+        // テキストを描画
+        self.draw_text_open(left, top, is_cursol_around);
+    }
+
+    //------------------------------
+    // パネルの文字を描画（開いている）
+    //------------------------------
+    fn draw_text_open(&self, left: f32, top:f32, is_cursol_around: bool) {
+        // 開いていなければなにもしない
+        if self.panel_sts != PanelSts::Open {
+            return
+        }
+
+        // 爆弾数の表示
+        if self.around_num > 0 {
+            let text = format!("{}", self.around_num);
+
+            // 強調表示（一旦力業）
+            if self.isbold && is_cursol_around {
+                draw_text(&text, left + 3.0, top + 18.0, PALNE_FONT_SIZE, WHITE);
+                draw_text(&text, left + 4.0, top + 18.0, PALNE_FONT_SIZE, WHITE);
+                draw_text(&text, left + 5.0, top + 18.0, PALNE_FONT_SIZE, WHITE);
+                draw_text(&text, left + 5.0, top + 21.0, PALNE_FONT_SIZE, BLACK);
+                draw_text(&text, left + 6.0, top + 21.0, PALNE_FONT_SIZE, BLACK);
+                draw_text(&text, left + 7.0, top + 21.0, PALNE_FONT_SIZE, BLACK);
+            }
+            draw_text(&text, left + 5.0, top + 20.0, PALNE_FONT_SIZE, RED);
+        }
+    }
+
+     //------------------------------
+    // パネルの文字を描画（閉じている）
+    //------------------------------
+    fn draw_text_close(&self, left: f32, top:f32) {
+        // 開いていればなにもしない
+        if self.panel_sts == PanelSts::Open {
+            return
+        }
+
+        // 旗が立っているなら描画
         if self.panel_sts == PanelSts::RedFlg || self.panel_sts == PanelSts::BlueFlg {
             let mut flag_col = RED;
             if self.panel_sts == PanelSts::BlueFlg {
                 flag_col = BLUE;
             }
-            draw_text("P", left + 5.0, top + 20.0, font_size, flag_col);
-        }
-
-        // パネルが閉じている場合はここまで
-        if !(self.panel_sts == PanelSts::Open) {
-//            let text = format!("{}", self.around_num);
-//            draw_text(text, left + 5.0, top + 20.0, font_size, RED);
-            return;
-        }
-
-        // パネルが開いているなら
-        // 爆弾マスは爆弾を描く
-
-        draw_text();
-    }
-
-    //------------------------------
-    // パネルの文字を描画
-    //------------------------------
-    fn draw_text(&self) {
-        //--- パネルが開いている ---//
-        if self.panel_sts == PanelSts::Open {
-            // 爆弾マスの場合爆弾を表示
-            if self.isbom {
-                draw_circle(left + PANEL_WIDTH as f32 / 2.0,top + PANEL_WIDTH as f32 / 2.0,
-                PANEL_WIDTH as f32 / 2.0 - 3.0,BLACK);
-                return;
-            }
-
-            // 周囲の爆弾が０の場合何も表示しない
-            if self.around_num == 0 {
-                return
-            }
-
-            // 周囲の爆弾数を表示する
-            let text = format!("{}", self.around_num);
-
-            // 強調表示（一旦力業）
-            if self.isbold {
-                draw_text(&text, left + 4.0, top + 20.0, font_size, BLACK);
-                draw_text(&text, left + 5.0, top + 19.0, font_size, BLACK);
-                draw_text(&text, left + 5.0, top + 21.0, font_size, BLACK);
-                draw_text(&text, left + 6.0, top + 20.0, font_size, BLACK);
-            }
-            draw_text(&text, left + 5.0, top + 20.0, font_size, RED);
+            draw_text("F", left + 7.0, top + 20.0, PALNE_FONT_SIZE, BLACK);
+            draw_text("F", left + 5.0, top + 19.0, PALNE_FONT_SIZE, flag_col);
         }
     }
-
 }

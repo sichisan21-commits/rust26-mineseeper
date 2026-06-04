@@ -1,8 +1,7 @@
 use macroquad::prelude::*;
 use crate::utils::*;
+use crate::myconst::*;
 use crate::gametable::GameTable;
-use crate::{PANEL_WIDTH,PANEL_HEIGHT,WALL_LEFT,WALL_TOP};
-use crate::LAYOUT_COLOR;
 
 // ゲームメインデータ
 pub struct GameMain {
@@ -123,25 +122,23 @@ impl GameMain {
         let (mouse_x, mouse_y) = mouse_position();
         let cursol_x = ((mouse_x - WALL_LEFT) / PANEL_WIDTH) as i32;
         let cursol_y = ((mouse_y - WALL_TOP) / PANEL_HEIGHT) as i32;
-        self.cursol_index = get_index(cursol_x, cursol_y, self.width, self.height);
+        let cursol_index = get_index(cursol_x, cursol_y, self.width, self.height);
 
-        // カーソル位置が盤面からはみ出さないよう制御
+        // カーソルは動いたか
+        let is_corsol_move = self.cursol_index != cursol_index;
+
+        // カーソル位置をゲーム内に反映
         self.cursol_x = cursol_x.clamp(0, self.width - 1);
         self.cursol_y = cursol_y.clamp(0, self.height - 1);
+        self.cursol_index = cursol_index;
         self.table.set_cursol(self.cursol_x, self.cursol_y, self.cursol_index);
 
-        let mut is_update = false;
-
-        // マウスクリック判定（左）
-        is_update |= self.click_tbl_left();
-
-        // マウスクリック判定（右）
+        // マウスクリック判定
+        let mut is_update = self.click_tbl_left();
         is_update |= self.click_tbl_right();
 
         // 更新が発生した場合
         if is_update {
-            // サポート情報を設定する
-//            self.table.auto_flag();
             // 今の盤面を保存する
             self.table.undo_push();
             // 爆弾が開かれた場合はステータスを変える
@@ -151,7 +148,11 @@ impl GameMain {
         }
 
         // カーソル周囲９マスのヒントを設定する
-        self.table.update_compflg();
+        if is_corsol_move || is_update {
+            self.table.clear_help();
+            self.table.set_bold();
+//            self.table.auto_flag();
+        }
     }
 
     //------------------------------

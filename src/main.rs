@@ -1,26 +1,11 @@
-use macroquad::prelude::*;
+mod myconst;
 mod utils;
 mod panel;
 mod gamemain;
-use gamemain::GameMain;
 mod gametable;
 
-//--------------------------------------------------
-// 定数
-//--------------------------------------------------
-pub const PANEL_WIDTH: f32 = 25.0;
-pub const PANEL_HEIGHT: f32 = 25.0;
-pub const WALL_LEFT: f32 = 200.0;
-pub const WALL_TOP: f32 = 20.0;
-//--- 色 ---
-// 盤面全体
-pub const LAYOUT_COLOR: Color = Color::from_rgba(220, 220, 220, 255);
-// パネル
-pub const PANEL_COL_CLOSE: Color = Color::from_rgba(180, 180, 180, 255);
-pub const PANEL_COL_OPEN: Color = Color::from_rgba(220, 220, 220, 255);
-pub const PANEL_COL_DANGER: Color = Color::from_rgba(220, 180, 180, 255);
-pub const PANEL_COL_SAFETY: Color = Color::from_rgba(180, 220, 220, 255);
-pub const PALNE_FONT_SIZE: i32 = 25;
+use macroquad::prelude::*;
+use gamemain::GameMain;
 
 //--------------------------------------------------
 // main

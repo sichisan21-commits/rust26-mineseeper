@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 use crate::panel::Panel;
-use crate::panel::PanelSts;
+use crate::panel::AutoSts;
 use crate::utils::*;
 
 pub struct GameTable {
@@ -216,28 +216,25 @@ impl GameTable {
     }
 
     //------------------------------
-    // カーソル周囲９マスで分かる情報を設定する
+    // 全ての補助フラグをクリアする
     //------------------------------
-    pub fn update_compflg(&mut self) {
-        // カーソルが盤面外なら何もしない
-        if self.cursol_index == -1 {
-            return
+    pub fn clear_help(&mut self) {
+        for index in 0..self.width * self.height {
+            self.table[index as usize].bold_off();
+            self.table[index as usize].set_autoflag(AutoSts::None);
         }
+    }
 
-        // カーソルの周囲９マスをチェックする
-        let around = self.table[self.cursol_index as usize].get_around_tbl();
-
-        // 一旦強調表示をクリア
-        for index in around.into_iter().flatten() {
-            if index != -1 {
-                self.table[index as usize].bold_off();
-            }
-        }
-
-        // カーソル周囲９マスをチェックする
-        for index in around.into_iter().flatten() {
-            if index != -1 {
-                self.update_compflg_one(index);
+    //------------------------------
+    // 強調表示オン
+    //------------------------------
+    pub fn set_bold(&mut self) {
+        for index in 0..self.width * self.height {
+            // パネルは開いていて、周囲の爆弾数が１以上なら
+            // 強調判定
+            if self.table[index as usize].is_open() &&
+               self.table[index as usize].get_around_num() > 0 {
+                self.update_bold(index);
             }
         }
     }
@@ -245,21 +242,13 @@ impl GameTable {
     //------------------------------
     // 指定マスの周囲９マスをチェックし、旗が立てられそうなら強調表示する
     //------------------------------
-    fn update_compflg_one(&mut self, cursol_index:i32) {
-        // カーソルが盤面外の場合
-        // またはカーソル位置のパネルは閉じられている場合
-        // カーソル周囲の爆弾数が０の場合なにもしない
-        if cursol_index == -1 ||
-           !self.table[cursol_index as usize].is_open() ||
-           self.table[cursol_index as usize].get_around_num() == 0 {
-            return;
-        }
-
+    fn update_bold(&mut self, cursol_index:i32) {
         // カーソルの周囲９マスをチェックする
         let around = self.table[cursol_index as usize].get_around_tbl();      
+
         // 閉じているマスと旗の立てられているマスをカウントする
-        let mut close_list:Vec<i32> = Vec::new();
         let mut close_cnt = 0;
+        let mut close_list:Vec<i32> = Vec::new();
         let mut flag_cnt = 0;
         let mut miss_cnt = 0;
         for index in around.into_iter().flatten() {
@@ -269,7 +258,7 @@ impl GameTable {
                 continue;
             }
 
-            // 純粋に未開封のマスをカウントする
+            // 未開封のマスをカウントする
             close_cnt += 1;
 
             if !self.table[index as usize].is_userflag() {
@@ -287,28 +276,22 @@ impl GameTable {
             }
         }
 
-        let around_num = self.table[cursol_index as usize].get_around_num();
         // フラグが正しく立てられていて爆弾数と一致している場合
         // 安全マスとしてフラグを立てる
-        if (close_cnt > around_num && flag_cnt == around_num && miss_cnt == 0) {
+        let around_num = self.table[cursol_index as usize].get_around_num();
+        if close_cnt > around_num && flag_cnt == around_num && miss_cnt == 0 {
             for index in close_list {
-                self.table[index as usize].set_autoflag(2);                
+                self.table[index as usize].set_autoflag(AutoSts::Safety);                
             }
             return
         }
 
-        // 周囲の爆弾数と未開封パネル数が一致していない
-        // または旗の数が爆弾数と一致していて間違った旗がなければ
-        // 強調表示はしない
-        if close_cnt != around_num ||
-           (flag_cnt == around_num && miss_cnt == 0) {
-            return
-        } 
-
         // 周囲の爆弾の数と未開封のマスの数が一致していて
         // 旗の数が一致していない場合強調表示
-        self.table[cursol_index as usize].bold_on();
-
+        if close_cnt == around_num &&
+           (flag_cnt != around_num || miss_cnt > 0) {
+            self.table[cursol_index as usize].bold_on();
+        }
     }
 
     //------------------------------
@@ -343,15 +326,15 @@ impl GameTable {
     //------------------------------
     // 自動的に判別し危険マス／安全マスにフラグを立てる
     //------------------------------
-    pub fn auto_flag (&mut self) {
+    pub fn _auto_flag (&mut self) {
         let mut is_update= false;
 
         // 一旦全部のフラグを消去する
         for index in 0..self.width * self.height {
-            self.table[index as usize].set_autoflag(0);
+            self.table[index as usize].set_autoflag(AutoSts::None);
         }        
 
-        // 無限ループを考慮して、最大１０回志向する
+        // 無限ループを考慮して、最大１０回試行する
         for _ in 0..1 {
             is_update = false;
 
@@ -400,7 +383,7 @@ impl GameTable {
 
             // 周囲の閉じているパネルのインデックスを保持
             // 安全フラグのパネルは除外
-            if self.table[index as usize].get_autoflag() != 2 {
+            if self.table[index as usize].get_autoflag() != AutoSts::Safety {
                 close_list.push(index);
             }
         }
@@ -412,8 +395,8 @@ impl GameTable {
 
         // 周囲の未開封マスが全て爆弾と判断できた
         for index in close_list {
-            if  self.table[index as usize].get_autoflag() != 1 {
-                self.table[index as usize].set_autoflag(1);
+            if  self.table[index as usize].get_autoflag() != AutoSts::Danger {
+                self.table[index as usize].set_autoflag(AutoSts::Danger);
                 is_update = true;
             }
         }
@@ -446,10 +429,10 @@ impl GameTable {
             }
 
             // 危険フラグが立っている場合爆弾数としてカウント
-            if self.table[index as usize].get_autoflag() == 1 {
+            if self.table[index as usize].get_autoflag() == AutoSts::Danger {
                 bomnum += 1;
             } else if !self.table[index as usize].is_open() &&
-                      self.table[index as usize].get_autoflag() != 2 {
+                      self.table[index as usize].get_autoflag() != AutoSts::Safety {
                 // 周囲の閉じているパネルのインデックスを保持
                 close_list.push(index);
             }
@@ -463,8 +446,8 @@ impl GameTable {
         // 爆弾数と危険フラグ数が一致しているなら
         // 残りの未開封パネルに安全フラグを立てる
         for index in close_list {
-            if self.table[index as usize].get_autoflag() != 2 {
-                self.table[index as usize].set_autoflag(2);
+            if self.table[index as usize].get_autoflag() != AutoSts::Safety {
+                self.table[index as usize].set_autoflag(AutoSts::Safety);
                 is_update = true;
             }
         }
