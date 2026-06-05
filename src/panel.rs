@@ -3,25 +3,6 @@ use crate::utils::*;
 use crate::myconst::*;
 
 //----------------------------------------
-// enum
-//----------------------------------------
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PanelSts {                         // パネルの状態
-    Close,                                  // 閉じている
-    Open,                                   // 開いている
-    RedFlg,                                 // 旗（赤）
-    BlueFlg,                                // 旗（青）
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AutoSts {                          // 自動判定フラグ
-    None,                                   // なにもなし
-    Safety,                                 // 安全マス
-    Danger,                                 // 危険マス
-    Unknown,                                // 不明
-}
-
-//----------------------------------------
 // 盤面のオブジェクト
 //----------------------------------------
 #[derive(Clone, PartialEq, Eq)]
@@ -71,7 +52,11 @@ impl Panel {
     // パネルを開く
     //------------------------------
     pub fn open(&mut self) {
-        self.panel_sts = PanelSts::Open;
+        if self.isbom {
+            self.panel_sts = PanelSts::BomOpen;
+        } else {
+            self.panel_sts = PanelSts::Open;
+        }
         self.auto_flg = AutoSts::None;
     }
 
@@ -80,6 +65,13 @@ impl Panel {
     //------------------------------
     pub fn is_open(&self) -> bool {
         self.panel_sts == PanelSts::Open
+    }
+
+    //------------------------------
+    // 爆弾が踏まれたか
+    //------------------------------
+    pub fn is_bomopen(&self) -> bool {
+        self.panel_sts == PanelSts::BomOpen
     }
 
     //------------------------------
@@ -93,6 +85,7 @@ impl Panel {
             PanelSts::RedFlg   => PanelSts::BlueFlg,
             PanelSts::BlueFlg  => PanelSts::Close,
             PanelSts::Open     => PanelSts::Open,
+            PanelSts::BomOpen  => PanelSts::BomOpen,
         };
     }
 
@@ -180,9 +173,14 @@ impl Panel {
     //------------------------------
     // 自分自身を描画
     //------------------------------
-    pub fn draw_panel(&self, cursol_x: i32, cursol_y: i32) {
-        let is_cursol_around =  (cursol_x - self.pos_x).abs() <= 1 &&
-           (cursol_y - self.pos_y).abs() <= 1;
+    pub fn draw_panel(&self, cursol_x: i32, cursol_y: i32, is_alldraw: bool) {
+        let mut is_cursol_around = true;
+
+        // カーソル周囲９マスか判定
+        if !is_alldraw {
+            is_cursol_around =  (cursol_x - self.pos_x).abs() <= 1 &&
+                   (cursol_y - self.pos_y).abs() <= 1;
+        }
 
         // 描画位置を算出
         let left = self.pos_x as f32 * PANEL_WIDTH + WALL_LEFT;
@@ -236,13 +234,18 @@ impl Panel {
     //------------------------------
     fn draw_panel_open(&self, left:f32, top: f32, is_cursol_around: bool){
         // 閉じているなら何もしない
-        if self.panel_sts != PanelSts::Open {
+        if self.panel_sts == PanelSts::Close ||
+           self.panel_sts == PanelSts::BlueFlg ||
+           self.panel_sts == PanelSts::RedFlg {
             return
         }
 
+        // 踏まれた爆弾か
+        let is_bom = self.isbom && self.panel_sts == PanelSts::BomOpen;
+
         // 表面の色を設定
         let mut panel_col = PANEL_COL_OPEN;
-        if self.isbom {
+        if is_bom {
             panel_col = RED;
         }
 
@@ -253,7 +256,7 @@ impl Panel {
            panel_col);
 
         // 爆弾マスの場合爆弾を表示
-        if self.isbom {
+        if is_bom {
             draw_circle(left + PANEL_WIDTH as f32 / 2.0,top + PANEL_WIDTH as f32 / 2.0,
             PANEL_WIDTH as f32 / 2.0 - 5.0,BLACK);
             return;

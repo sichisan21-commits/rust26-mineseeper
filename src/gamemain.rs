@@ -23,6 +23,7 @@ pub struct GameMain {
     is_auto_mode: bool,                     // 自動で危険マスと安全マスを表示
     is_dang_on: bool,                       // 危険マスの表示
     is_safe_on: bool,                       // 安全マスの表示
+    is_allhint: bool,                       // 前面表示
 }
 
 //--------------------------------------------------
@@ -50,6 +51,7 @@ impl GameMain {
             is_auto_mode: false,
             is_dang_on: false,
             is_safe_on: false,
+            is_allhint: false,
         };
 
         // チェックボックスを作成
@@ -98,7 +100,7 @@ impl GameMain {
             LAYOUT_COLOR);
 
         // パネルを描画する
-        self.table.draw_panel();
+        self.table.draw_panel(self.is_allhint);
 
         // カーソル周りに枠を表示
         if self.is_frame {
@@ -209,7 +211,7 @@ impl GameMain {
             is_update = true;
         }
         if is_key_pressed(KeyCode::Right) {
-            self.helplv = (self.helplv + 1).min(5);
+            self.helplv = (self.helplv + 1).min(6);
             is_update = true;
         }
 
@@ -225,6 +227,7 @@ impl GameMain {
         self.is_auto_mode = false;
         self.is_dang_on = false;
         self.is_safe_on = false;
+        self.is_allhint = false;
 
         // アシストレベル１なら
         if self.helplv >= 1 {
@@ -252,6 +255,10 @@ impl GameMain {
             self.is_auto_mode = true;
             self.is_dang_on = true;
             self.is_safe_on = true;
+        }
+
+        if self.helplv >= 6 {
+            self.is_allhint = true;
         }
 
         self.chkbox[0].set_flg(self.is_frame);

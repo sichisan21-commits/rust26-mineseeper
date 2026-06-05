@@ -1,8 +1,16 @@
 use macroquad::prelude::*;
 use crate::panel::Panel;
-use crate::panel::AutoSts;
 use crate::utils::*;
+use crate::myconst::*;
 
+// 推論テーブル
+struct Inference {
+    myindex: i32,
+    index: Vec<i32>,
+    bomnum: i32,
+}
+
+// ゲーム情報
 pub struct GameTable {
     width: i32,                             // 盤面の幅
     height: i32,                            // 盤面の高さ
@@ -11,9 +19,10 @@ pub struct GameTable {
     cursol_index: i32,                      // カーソル位置の配列番号
     num_bom: i32,                           // 爆弾の数
     table: Vec<Panel>,                      // 盤面データ
-    table_backup: Vec<Panel>,                 // 盤面バックアップ
+    table_backup: Vec<Panel>,               // 盤面バックアップ
     table_undo: Vec<Vec<Panel>>,            // 盤面データ（履歴）
     useundo: usize,                         // 使用されるundo番号
+    inference: Vec<Inference>,              // 推論テーブル
 }
 
 //--------------------------------------------------
@@ -35,6 +44,7 @@ impl GameTable {
             table_backup: Vec::new(),
             table_undo: Vec::new(),
             useundo: 0,
+            inference: Vec::new(),
         }
     }
 
@@ -71,6 +81,21 @@ impl GameTable {
         self.cursol_x = cursol_x;
         self.cursol_y = cursol_y;
         self.cursol_index = cursol_index;
+    }
+
+    //------------------------------
+    // 爆弾を配置する(テスト用)
+    //------------------------------
+    pub fn _setting_bom(&mut self, num_bom: i32) {
+        for x in 0..self.width {
+            for y in 0..self.height {
+                if y > 2  || x > 6 {
+                    if x % 3 == 0 || x > 6{
+                        self.bomon(x, y);
+                    }
+                }
+            }
+        }
     }
 
     //------------------------------
@@ -159,13 +184,6 @@ impl GameTable {
     }
 
     //------------------------------
-    // UNDO 実行中か
-    //------------------------------
-    pub fn is_useundo(&self) -> bool {
-        self.useundo < self.table_undo.len()
-    }
-
-    //------------------------------
     // テーブルをUNDOする
     //------------------------------
     pub fn table_undo(&mut self) {
@@ -188,13 +206,20 @@ impl GameTable {
     }
 
     //------------------------------
+    // UNDO 実行中か
+    //------------------------------
+    pub fn is_useundo(&self) -> bool {
+        self.useundo < self.table_undo.len()
+    }
+
+    //------------------------------
     // 踏まれた爆弾数を取得
     //------------------------------
     pub fn open_bomnum(&mut self) -> usize {
         // 開かれている爆弾を数える
         self.table
             .iter()
-            .filter(|p| p.is_bom() && p.is_open())
+            .filter(|p| p.is_bomopen())
             .count()
     }
 
@@ -222,7 +247,7 @@ impl GameTable {
     }
 
     //------------------------------
-    // 左クリック処理
+    // →クリック処理
     // 変更があった場合 true、ない場合は false を返す
     //------------------------------
     pub fn click_right(&mut self) -> bool {
@@ -252,13 +277,11 @@ impl GameTable {
     }
 
     //------------------------------
-    // 強調表示オン
+    // 旗が立てられる可能性のあるマスの強調表示
     //------------------------------
     pub fn set_bold(&mut self, is_panel_bold: bool, is_dang_on: bool, is_safe_on: bool) {
-        // 旗が立てられる可能性のあるマスの強調表示
         for index in 0..self.width * self.height {
-            // パネルは開いていて、周囲の爆弾数が１以上なら
-            // 強調判定
+            // パネルは開いていて、周囲の爆弾数が１以上なら強調判定
             if self.table[index as usize].is_open() &&
                self.table[index as usize].get_around_num() > 0 {
                 self.update_bold(is_panel_bold, is_dang_on, is_safe_on, index);
@@ -303,16 +326,15 @@ impl GameTable {
             }
         }
 
+        // 周囲の爆弾数を取得
         let around_num = self.table[cursol_index as usize].get_around_num();
 
-        // 強調表示オン
-        if is_panel_bold {
-            // 周囲の爆弾の数と未開封のマスの数が一致していて
-            // 旗の数が一致していない場合強調表示
-            if close_cnt == around_num &&
-               (flag_cnt != around_num || miss_cnt > 0) {
+        // 強調表示有効で
+        // 周囲の爆弾の数と未開封のマスの数が一致していて
+        // 旗の数が一致していない場合強調表示
+        if is_panel_bold && close_cnt == around_num &&
+           (flag_cnt != around_num || miss_cnt > 0) {
                 self.table[cursol_index as usize].bold_on();
-            }
         }
 
         // 安全マス表示オン
@@ -379,6 +401,13 @@ impl GameTable {
                 }
             }
 
+            // 高度推論を行う
+            for _ in 0..10 {
+                self.inference.clear();
+                self.make_inference();
+                self.find_inference();
+            }
+
             // フラグの更新がなければループ終了
             if !is_update {
                 break;
@@ -393,7 +422,6 @@ impl GameTable {
                 }
             }
         }
-
     }
  
     //------------------------------
@@ -492,10 +520,140 @@ impl GameTable {
         is_update
     }
 
+    fn make_inference(&mut self) {
+        for index in 0..self.width * self.height {
+                self.create_inference(index);
+        }
+    }
+
+    fn create_inference(&mut self, cursol_index: i32) {
+        // 閉じているマスは何もしない
+        if !self.table[cursol_index as usize].is_open() {
+            return
+        }
+
+        // 対象マスの周囲９マスを取得する
+        let around = self.table[cursol_index as usize].get_around_tbl();
+
+        // 周囲の閉じているマス（安全でも危険でもないマス）をカウントする
+        let mut close_list:Vec<i32> = Vec::new();
+        let mut dang_cnt = 0;
+        for index in around.into_iter().flatten() {
+            // 範囲外および開いているマスはスキップ
+            if index == -1 || self.table[index as usize].is_open() {
+                continue;
+            }
+            // パネルの自動フラグを取得
+            let auto_flag = self.table[index as usize].get_autoflag();
+            if auto_flag == AutoSts::Danger {
+                // 危険パネルのカウント
+                dang_cnt += 1;
+            } else if auto_flag == AutoSts::None || auto_flag == AutoSts::Unknown {
+                // 未開封パネルの保持
+                close_list.push(index);
+            }
+        }
+        // 見つかっていない爆弾数を求める
+        let bomnum = self.table[cursol_index as usize].get_around_num() - dang_cnt;
+        if bomnum > 0 {
+            self.inference.push(
+                Inference {
+                    myindex: cursol_index,
+                    index: close_list,
+                    bomnum: bomnum,
+                }
+            )
+        }
+    }
+
+
+    fn find_inference(&mut self) {
+        for index in 0..self.width * self.height {
+            self.match_inference(index);
+        }
+    }
+
+    fn match_inference(&mut self, cursol_index: i32) {
+        // 閉じているマスは何もしない
+        if !self.table[cursol_index as usize].is_open() {
+            return
+        }
+
+        // 周囲９マスの中から、未確定のマスだけリスト化する
+        let around = self.table[cursol_index as usize].get_around_tbl();
+        let mut around_num = self.table[cursol_index as usize].get_around_num();
+        let mut myclose_index:Vec<i32> = Vec::new();
+        for index in around.into_iter().flatten() {
+            // 開いているマスはスキップ
+            if index == -1 || self.table[index as usize].is_open() {
+                continue
+            }
+
+            // テーブル内の自動判定フラグを確認
+            match self.table[index as usize].get_autoflag() {
+                // 確定している危険マスがあるなら爆弾数から差し引く
+                AutoSts::Danger => {
+                    around_num -= 1;
+                }
+                // 周囲の未確定のマスは保存する
+                AutoSts::None | AutoSts::Unknown => {
+                    myclose_index.push(index);
+                }
+                _ => {}
+            }
+        }
+
+        // 周りに未確定のマスがない、またはすべての爆弾は確定している
+        if myclose_index.is_empty() || around_num == 0{
+            return;
+        }
+
+        // 推論テーブルでループする
+        for inference in &self.inference {
+            // 自分自身とは比較しない
+            if inference.myindex == cursol_index {
+                continue;
+            }
+
+            // 何度も検証するためテーブルはコピーしておく
+//            let mut myclose_clone = myclose_index.clone();
+//            let mut is_exists = true;
+
+            // 推論テーブルのマスが現在の周囲９マスに含まれるか
+            // 含まれなければスキップ
+            if !inference.index.iter().all(|idx| myclose_index.contains(idx)) {
+                continue;
+            }
+
+            // myclose_index から inference.index を除いた残りを作る
+            let remain: Vec<i32> = myclose_index
+                .iter()
+                .cloned()
+                .filter(|idx| !inference.index.contains(idx))
+                .collect();
+
+            // 判定中に -1 した要素を削除
+//            myclose_clone.retain(|&x| x != -1);
+
+            // 残爆弾数が一致した場合、重複していないマスは安全
+            if around_num == inference.bomnum {
+                for index in remain  {
+                    self.table[index as usize].set_autoflag(AutoSts::Safety);
+                }
+            } else if around_num - inference.bomnum == remain.len() as i32 {
+            // 残ったマスの数と差し引き爆弾数が同じ場合は危険
+                for index in remain {
+                    self.table[index as usize].set_autoflag(AutoSts::Danger);
+                }
+            }
+            break;
+        }
+    }
+
     //------------------------------
     // 盤面を描画する
     //------------------------------
-    pub fn draw_panel(&self) {
+    pub fn draw_panel(&self, is_allhint: bool) {
 
         // 立っている旗の数を取得
         let flag_num = self.table
@@ -515,7 +673,7 @@ impl GameTable {
 
         // 盤面を表示
         for panel in &self.table {
-            panel.draw_panel(self.cursol_x, self.cursol_y);
+            panel.draw_panel(self.cursol_x, self.cursol_y, is_allhint);
         }
 
     }
