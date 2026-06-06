@@ -1,5 +1,6 @@
 use macroquad::prelude::*;
-use crate::utils::*;
+use crate::draw::*;
+use crate::myconst::*;
 
 pub struct ChkBox{
     text: String,
@@ -28,7 +29,7 @@ impl ChkBox {
                 "[-]"
             }
         };
-        drawtextln(&format!("{}{}",check, self.text), self.left, self.top, self.txtcol);
+        drawtextln(&format!("{}{}",check, self.text), self.left, self.top, FONT_SIZE, self.txtcol);
     }
 
     pub fn set_flg(&mut self, flg: bool) {

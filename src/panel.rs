@@ -183,8 +183,8 @@ impl Panel {
         }
 
         // 描画位置を算出
-        let left = self.pos_x as f32 * PANEL_WIDTH + WALL_LEFT;
-        let top = self.pos_y as f32 * PANEL_HEIGHT + WALL_TOP;
+        let left = self.pos_x as f32 * PANEL_WIDTH;
+        let top = self.pos_y as f32 * PANEL_HEIGHT;
 
         // 下地を描く
         draw_rectangle(left,top,
@@ -282,15 +282,15 @@ impl Panel {
 
             // 強調表示（一旦力業）
             if self.isbold && is_cursol_around {
-                draw_text(&text, left + 3.0, top + 18.0, PANEL_FONT_SIZE, WHITE);
-                draw_text(&text, left + 4.0, top + 18.0, PANEL_FONT_SIZE, WHITE);
-                draw_text(&text, left + 5.0, top + 18.0, PANEL_FONT_SIZE, WHITE);
-                draw_text(&text, left + 5.0, top + 22.0, PANEL_FONT_SIZE, BLACK);
-                draw_text(&text, left + 6.0, top + 22.0, PANEL_FONT_SIZE, BLACK);
-                draw_text(&text, left + 7.0, top + 22.0, PANEL_FONT_SIZE, BLACK);
+                draw_text(&text, left + PANEL_FONT_OFFSX - 4.0, top + PANEL_FONT_OFFSY - 4.0, PANEL_FONT_SIZE, WHITE);
+                draw_text(&text, left + PANEL_FONT_OFFSX - 2.0, top + PANEL_FONT_OFFSY - 4.0, PANEL_FONT_SIZE, WHITE);
+                draw_text(&text, left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY - 4.0, PANEL_FONT_SIZE, WHITE);
+                draw_text(&text, left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY + 4.0, PANEL_FONT_SIZE, BLACK);
+                draw_text(&text, left + PANEL_FONT_OFFSX + 2.0, top + PANEL_FONT_OFFSY + 4.0, PANEL_FONT_SIZE, BLACK);
+                draw_text(&text, left + PANEL_FONT_OFFSX + 4.0, top + PANEL_FONT_OFFSY + 4.0, PANEL_FONT_SIZE, BLACK);
             }
-            draw_text(&text, left + 5.0, top + 20.0, PANEL_FONT_SIZE, text_col);
-            draw_text(&text, left + 6.0, top + 20.0, PANEL_FONT_SIZE, text_col);
+            draw_text(&text, left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, text_col);
+            draw_text(&text, left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, text_col);
         }
     }
 
@@ -309,13 +309,14 @@ impl Panel {
             if self.panel_sts == PanelSts::BlueFlg {
                 flag_col = BLUE;
             }
-            draw_text("F", left + 7.0, top + 20.0, PANEL_FONT_SIZE, BLACK);
-            draw_text("F", left + 5.0, top + 19.0, PANEL_FONT_SIZE, flag_col);
+            draw_text("F", left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, BLACK);
+            draw_text("F", left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, flag_col);
+            draw_text("F", left + PANEL_FONT_OFFSX - 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, flag_col);
         } else {
             // 判明していないパネルなら？を表示
             if self.auto_flg == AutoSts::Unknown && is_cursol_around {
-                draw_text("?", left + 6.0, top + 20.0, PANEL_FONT_SIZE, GRAY);
-                draw_text("?", left + 5.0, top + 20.0, PANEL_FONT_SIZE, GRAY);
+                draw_text("?", left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, GRAY);
+                draw_text("?", left + PANEL_FONT_OFFSX, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, GRAY);
             }
         }
     }

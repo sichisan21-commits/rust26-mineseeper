@@ -1,7 +1,15 @@
 use macroquad::prelude::*;
 use crate::panel::Panel;
 use crate::utils::*;
+use crate::draw::*;
 use crate::myconst::*;
+
+#[derive(Debug, Copy, Clone)]
+pub struct MyCursol {                               // カーソル情報
+    pub x: i32,                                     // 横位置
+    pub y: i32,                                     // 縦位置
+    pub index: i32,                                 // インデックス
+}
 
 // 推論テーブル
 struct Inference {
@@ -14,16 +22,16 @@ struct Inference {
 pub struct GameTable {
     width: i32,                             // 盤面の幅
     height: i32,                            // 盤面の高さ
-    cursol_x: i32,                          // カーソル横位置
-    cursol_y: i32,                          // カーソル縦位置
-    cursol_index: i32,                      // カーソル位置の配列番号
     num_bom: i32,                           // 爆弾の数
+    mouse_pos: Vec2,                        // マウス位置
+    cursol: MyCursol,                       // カーソル位置
     table: Vec<Panel>,                      // 盤面データ
     table_backup: Vec<Panel>,               // 盤面バックアップ
     table_undo: Vec<Vec<Panel>>,            // 盤面データ（履歴）
     useundo: usize,                         // 使用されるundo番号
     inference: Vec<Inference>,              // 推論テーブル
 }
+
 
 //--------------------------------------------------
 // 実装
@@ -32,14 +40,13 @@ impl GameTable {
     //------------------------------
     // 初期化
     //------------------------------
-    pub fn new() -> GameTable {
+    pub fn new(width:i32, height:i32, num_bom:i32) -> GameTable {
         GameTable {
-            width: 0,
-            height: 0,
-            cursol_x: 0,
-            cursol_y: 0,
-            cursol_index: 0,
-            num_bom: 0,
+            width,
+            height,
+            num_bom,
+            mouse_pos: Vec2 {x:0.0, y:0.0},
+            cursol: MyCursol {x:0, y:0, index:0},
             table: Vec::new(),
             table_backup: Vec::new(),
             table_undo: Vec::new(),
@@ -75,12 +82,36 @@ impl GameTable {
     }
 
     //------------------------------
+    // 赤い旗の数を取得
+    //------------------------------
+    pub fn get_num_redflag(&self) -> usize {
+        self.table
+            .iter()
+            .filter(|p| p.is_redflag())
+            .count()
+    }
+
+    //------------------------------
+    // 閉じているパネルの数
+    //------------------------------
+    pub fn get_num_close(&self) -> usize {
+        self.table
+            .iter()
+            .filter(|p| !p.is_open())
+            .count()
+    }
+
+    //------------------------------
     // カーソル位置をセットする
     //------------------------------
-    pub fn set_cursol(&mut self, cursol_x:i32, cursol_y:i32, cursol_index:i32) {
-        self.cursol_x = cursol_x;
-        self.cursol_y = cursol_y;
-        self.cursol_index = cursol_index;
+    pub fn set_mousepos(&mut self, mouse_pos: Vec2) {
+        self.mouse_pos = mouse_pos;
+        let cursol_x = (mouse_pos.x / PANEL_WIDTH) as i32;
+        let cursol_y = (mouse_pos.y / PANEL_HEIGHT) as i32;
+        self.cursol = MyCursol {
+            x: cursol_x, y: cursol_y,
+            index: get_index(cursol_x, cursol_y, self.width, self.height),
+        };
     }
 
     //------------------------------
@@ -112,7 +143,7 @@ impl GameTable {
                 let land_y = rand::gen_range(0, self.height);
 
                 // カーソル位置と一致する位置には配置しない
-                if land_x == self.cursol_x && land_y == self.cursol_y {
+                if land_x == self.cursol.x && land_y == self.cursol.y {
                     continue;
                 }
 
@@ -152,16 +183,15 @@ impl GameTable {
     //------------------------------
     // 盤面のバックアップ
     //------------------------------
-    pub fn tbl_backup(&mut self) {
-        self.table_backup = self.table.clone();
+    pub fn tbl_backup(&self) -> Vec<Panel> {
+        self.table.clone()
     }
 
     //------------------------------
     // バックアップから復帰
     //------------------------------
-    pub fn tbl_restore(&mut self) {
-        self.table = self.table_backup.clone();
-        self.table_backup.clear();
+    pub fn tbl_restore(&mut self, table:Vec<Panel>) {
+        self.table = table.clone();
     }
 
     //------------------------------
@@ -229,20 +259,20 @@ impl GameTable {
     //------------------------------
     pub fn click_left(&mut self) -> bool { 
         // クリック位置が盤面外、あるいはすでに開かれているなら何もしない
-        if self.cursol_index == -1 || self.table[self.cursol_index as usize].is_open() {
+        if self.cursol.index == -1 || self.table[self.cursol.index as usize].is_open() {
             return false
         }
 
         // クリック位置を開く
-        self.table[self.cursol_index as usize].open();
+        self.table[self.cursol.index as usize].open();
         
         // クリック位置が爆弾の場合終了
-        if self.table[self.cursol_index as usize].is_bom() {
+        if self.table[self.cursol.index as usize].is_bom() {
             return true
         }
 
         // クリック位置からパネルを連鎖的に開く
-        self.openchain(self.cursol_index);
+        self.openchain(self.cursol.index);
         true
     }
 
@@ -253,12 +283,12 @@ impl GameTable {
     pub fn click_right(&mut self) -> bool {
         // 座標をインデックスに変換
         // クリック位置が盤面外、あるいはすでに開かれているなら何もしない
-        if self.cursol_index == -1 || self.table[self.cursol_index as usize].is_open() {
+        if self.cursol.index == -1 || self.table[self.cursol.index as usize].is_open() {
             return false
         }
 
         // 旗の操作
-        self.table[self.cursol_index as usize].set_userflag();
+        self.table[self.cursol.index as usize].set_userflag();
         true
     }
 
@@ -568,6 +598,8 @@ impl GameTable {
 
 
     fn find_inference(&mut self) {
+        println!("find_inference");
+        println!("----------");
         for index in 0..self.width * self.height {
             self.match_inference(index);
         }
@@ -654,28 +686,29 @@ impl GameTable {
     // 盤面を描画する
     //------------------------------
     pub fn draw_panel(&self, is_allhint: bool) {
-
-        // 立っている旗の数を取得
-        let flag_num = self.table
-            .iter()
-            .filter(|p| p.is_redflag())
-            .count();
-        let close_num = self.table
-            .iter()
-            .filter(|p| !p.is_open())
-            .count();
-
-        let mut pos_y = 1;
-        pos_y += 1; drawtextln(&format!("SIZE: {} x {}",self.width, self.height), 1, pos_y, BLACK);
-        pos_y += 1; drawtextln(&format!("BOMB: {}",self.num_bom), 1, pos_y, BLACK);
-        pos_y += 1; drawtextln(&format!("CLOSE PANEL: {}",close_num), 1, pos_y, BLACK);
-        pos_y += 1; drawtextln(&format!("REDFLAG: {}",flag_num), 1, pos_y, BLACK);
-
         // 盤面を表示
         for panel in &self.table {
-            panel.draw_panel(self.cursol_x, self.cursol_y, is_allhint);
+            panel.draw_panel(self.cursol.x, self.cursol.y, is_allhint);
         }
-
+        // マウス位置表示
+        draw_circle(self.mouse_pos.x, self.mouse_pos.y, 10.0, RED);
     }
+
+    //------------------------------
+    // カーソルを描画する
+    //------------------------------
+    pub fn draw_curasol(&self) {
+        let border = 6.0;
+        // 一旦上下左右のパネル位置を求める
+        let left  = self.cursol.x.clamp(0,self.width - 1);
+        let top  = self.cursol.y.clamp(0,self.height - 1);
+
+        // カーソル枠の描画
+        draw_rectangle_lines(
+            (left - 1) as f32 * PANEL_WIDTH, (top - 1) as f32 * PANEL_HEIGHT,
+            PANEL_WIDTH * 3.0, PANEL_HEIGHT * 3.0,
+            border + 3.0, RED);
+    }
+
 }
 
