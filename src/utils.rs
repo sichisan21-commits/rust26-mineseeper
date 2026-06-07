@@ -1,9 +1,19 @@
 use macroquad::prelude::*;
+use macroquad::miniquad::window;
+use crate::myconst::*;
 
 // 座標データ
 pub struct PosTable {
     pub x: f32,
     pub y: f32,
+}
+
+pub fn set_winsize(width: f32, height: f32) {
+    // 必要な画面サイズを求める
+    // 最小・最大範囲に補正して画面サイズへ反映
+    let win_width = width.clamp(WIN_MIN_X, WIN_MAX_X);
+    let win_height = height.clamp(WIN_MIN_Y, WIN_MAX_Y);
+    window::set_window_size(win_width as u32, win_height as u32);
 }
 
 //------------------------------

@@ -26,7 +26,6 @@ pub struct GameTable {
     mouse_pos: Vec2,                        // マウス位置
     cursol: MyCursol,                       // カーソル位置
     table: Vec<Panel>,                      // 盤面データ
-    table_backup: Vec<Panel>,               // 盤面バックアップ
     table_undo: Vec<Vec<Panel>>,            // 盤面データ（履歴）
     useundo: usize,                         // 使用されるundo番号
     inference: Vec<Inference>,              // 推論テーブル
@@ -48,7 +47,6 @@ impl GameTable {
             mouse_pos: Vec2 {x:0.0, y:0.0},
             cursol: MyCursol {x:0, y:0, index:0},
             table: Vec::new(),
-            table_backup: Vec::new(),
             table_undo: Vec::new(),
             useundo: 0,
             inference: Vec::new(),
@@ -104,7 +102,7 @@ impl GameTable {
     //------------------------------
     // カーソル位置をセットする
     //------------------------------
-    pub fn set_mousepos(&mut self, mouse_pos: Vec2) {
+    pub fn set_mousepos(&mut self, mouse_pos: Vec2) -> MyCursol {
         self.mouse_pos = mouse_pos;
         let cursol_x = (mouse_pos.x / PANEL_WIDTH) as i32;
         let cursol_y = (mouse_pos.y / PANEL_HEIGHT) as i32;
@@ -112,6 +110,7 @@ impl GameTable {
             x: cursol_x, y: cursol_y,
             index: get_index(cursol_x, cursol_y, self.width, self.height),
         };
+        self.cursol
     }
 
     //------------------------------
@@ -709,6 +708,5 @@ impl GameTable {
             PANEL_WIDTH * 3.0, PANEL_HEIGHT * 3.0,
             border + 3.0, RED);
     }
-
 }
 

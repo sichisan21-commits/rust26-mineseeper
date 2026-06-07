@@ -189,7 +189,7 @@ impl Panel {
         // 下地を描く
         draw_rectangle(left,top,
             PANEL_WIDTH, PANEL_HEIGHT,
-            BLACK);
+            PANEL_COL_SHADOW);
         draw_rectangle(left,top,
             PANEL_WIDTH - PANEL_THICK, PANEL_HEIGHT - PANEL_THICK,
             WHITE);
