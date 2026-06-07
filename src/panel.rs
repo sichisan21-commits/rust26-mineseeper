@@ -7,15 +7,16 @@ use crate::myconst::*;
 //----------------------------------------
 #[derive(Clone, PartialEq, Eq)]
 pub struct Panel {
-    panel_sts: PanelSts,                    // パネルの状態
     pos_x: i32,                             // 自分の横座標
     pos_y: i32,                             // 自分の縦座標
     index: i32,                             // 自分の配列番号
+    is_open: bool,                          // 開いているか
+    is_bom: bool,                           // 爆弾有無
+    is_bold: bool,                          // 太字表示
+    auto_flg: AutoSts,                      // 自動判定フラグ
+    userflg: UserFlg,                       // 旗
     around_tbl: [[i32; 3];3],               // カーソル周囲９マスのテーブル位置
     around_num: i32,                        // 周りの爆弾数
-    isbom: bool,                            // 爆弾有無
-    isbold: bool,                           // 太字表示
-    auto_flg: AutoSts,                      // 自動判定フラグ
 }
 
 // 実装
@@ -26,12 +27,13 @@ impl Panel {
     pub fn new(pos_x: i32, pos_y: i32, width: i32, height: i32) -> Panel {
         let index = get_index(pos_x, pos_y, width, height);
         let mut panel = Panel {
-            panel_sts: PanelSts::Close,
             pos_x,
             pos_y,
             index,
-            isbom: false,
-            isbold: false,
+            is_open: false,
+            is_bom: false,
+            is_bold: false,
+            userflg: UserFlg::None,
             around_num: 0,
             auto_flg: AutoSts::None,
             around_tbl: [[-1;3];3],
@@ -52,55 +54,40 @@ impl Panel {
     // パネルを開く
     //------------------------------
     pub fn open(&mut self) {
-        if self.isbom {
-            self.panel_sts = PanelSts::BomOpen;
-        } else {
-            self.panel_sts = PanelSts::Open;
-        }
-        self.auto_flg = AutoSts::None;
+        self.is_open = true;
     }
 
     //------------------------------
     // パネルが開いているか
     //------------------------------
     pub fn is_open(&self) -> bool {
-        self.panel_sts == PanelSts::Open
+        self.is_open
     }
 
     //------------------------------
     // 爆弾が踏まれたか
     //------------------------------
     pub fn is_bomopen(&self) -> bool {
-        self.panel_sts == PanelSts::BomOpen
+        self.is_open && self.is_bom
     }
 
     //------------------------------
     // 旗のオン／オフ
     //------------------------------
-    pub fn set_userflag(&mut self) {
+    pub fn userflg(&mut self) {
         // Close → RedFlg → BlueFlg の順に巡回する
-        // Open の場合なにもしない
-        self.panel_sts = match self.panel_sts {
-            PanelSts::Close    => PanelSts::RedFlg,
-            PanelSts::RedFlg   => PanelSts::BlueFlg,
-            PanelSts::BlueFlg  => PanelSts::Close,
-            PanelSts::Open     => PanelSts::Open,
-            PanelSts::BomOpen  => PanelSts::BomOpen,
+        self.userflg = match self.userflg {
+            UserFlg::None    => UserFlg::RedFlg,
+            UserFlg::RedFlg  => UserFlg::BlueFlg,
+            UserFlg::BlueFlg => UserFlg::None,
         };
     }
 
     //------------------------------
     // 旗の有無
     //------------------------------
-    pub fn is_userflag(&self) -> bool {
-        self.panel_sts == PanelSts::RedFlg || self.panel_sts == PanelSts::BlueFlg
-    }
-
-    //------------------------------
-    // 赤の旗であるか
-    //------------------------------
-    pub fn is_redflag(&self) -> bool {
-        self.panel_sts == PanelSts::RedFlg
+    pub fn get_userflg(&self) -> UserFlg {
+        self.userflg
     }
 
     //------------------------------
@@ -128,14 +115,14 @@ impl Panel {
     // 強調表示オン
     //------------------------------
     pub fn bold_on(&mut self) {
-        self.isbold = true;
+        self.is_bold = true;
     }
 
     //------------------------------
     // 強調表示オフ
     //------------------------------
     pub fn bold_off(&mut self) {
-        self.isbold = false;
+        self.is_bold = false;
     }
 
     //------------------------------
@@ -149,7 +136,7 @@ impl Panel {
     // 爆弾を置く
     //------------------------------
     pub fn bomon(&mut self) {
-        self.isbom = true;
+        self.is_bom = true;
         self.around_num = 0;
     }
 
@@ -157,7 +144,7 @@ impl Panel {
     // 爆弾を持っているか
     //------------------------------
     pub fn is_bom(&self) -> bool {
-        self.isbom
+        self.is_bom
     }
 
     //------------------------------
@@ -165,7 +152,7 @@ impl Panel {
     //------------------------------
     pub fn num_up(&mut self) {
         // 自分自身が爆弾マスでない場合にカウントを増やす
-        if !self.isbom {
+        if !self.is_bom {
             self.around_num += 1;
         }
     }
@@ -179,7 +166,7 @@ impl Panel {
         // カーソル周囲９マスか判定
         if !is_alldraw {
             is_cursol_around =  (cursol_x - self.pos_x).abs() <= 1 &&
-                   (cursol_y - self.pos_y).abs() <= 1;
+                (cursol_y - self.pos_y).abs() <= 1;
         }
 
         // 描画位置を算出
@@ -204,7 +191,7 @@ impl Panel {
     //------------------------------
     fn draw_panel_close(&self, left:f32, top: f32, is_cursol_around: bool){
         // 開いているなら何もしない
-        if self.panel_sts == PanelSts::Open {
+        if self.is_open {
             return
         }
 
@@ -234,18 +221,13 @@ impl Panel {
     //------------------------------
     fn draw_panel_open(&self, left:f32, top: f32, is_cursol_around: bool){
         // 閉じているなら何もしない
-        if self.panel_sts == PanelSts::Close ||
-           self.panel_sts == PanelSts::BlueFlg ||
-           self.panel_sts == PanelSts::RedFlg {
+        if !self.is_open {
             return
         }
 
-        // 踏まれた爆弾か
-        let is_bom = self.isbom && self.panel_sts == PanelSts::BomOpen;
-
         // 表面の色を設定
         let mut panel_col = PANEL_COL_OPEN;
-        if is_bom {
+        if self.is_bom {
             panel_col = RED;
         }
 
@@ -256,7 +238,7 @@ impl Panel {
            panel_col);
 
         // 爆弾マスの場合爆弾を表示
-        if is_bom {
+        if self.is_bom {
             draw_circle(left + PANEL_WIDTH as f32 / 2.0,top + PANEL_WIDTH as f32 / 2.0,
             PANEL_WIDTH as f32 / 2.0 - 5.0,BLACK);
             return;
@@ -271,7 +253,7 @@ impl Panel {
     //------------------------------
     fn draw_text_open(&self, left: f32, top:f32, is_cursol_around: bool) {
         // 開いていなければなにもしない
-        if self.panel_sts != PanelSts::Open {
+        if !self.is_open {
             return
         }
 
@@ -281,7 +263,7 @@ impl Panel {
             let text_col = from_number(self.around_num);
 
             // 強調表示（一旦力業）
-            if self.isbold && is_cursol_around {
+            if self.is_bold && is_cursol_around {
                 draw_text(&text, left + PANEL_FONT_OFFSX - 4.0, top + PANEL_FONT_OFFSY - 4.0, PANEL_FONT_SIZE, WHITE);
                 draw_text(&text, left + PANEL_FONT_OFFSX - 2.0, top + PANEL_FONT_OFFSY - 4.0, PANEL_FONT_SIZE, WHITE);
                 draw_text(&text, left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY - 4.0, PANEL_FONT_SIZE, WHITE);
@@ -299,16 +281,18 @@ impl Panel {
     //------------------------------
     fn draw_text_close(&self, left: f32, top:f32, is_cursol_around: bool) {
         // 開いていればなにもしない
-        if self.panel_sts == PanelSts::Open {
+        if self.is_open {
             return
         }
 
         // 旗が立っているなら描画
-        if self.panel_sts == PanelSts::RedFlg || self.panel_sts == PanelSts::BlueFlg {
-            let mut flag_col = RED;
-            if self.panel_sts == PanelSts::BlueFlg {
-                flag_col = BLUE;
-            }
+        if self.userflg != UserFlg::None {
+            let flag_col =
+                if self.userflg == UserFlg::RedFlg {
+                    RED
+                } else {
+                    BLUE
+                };
             draw_text("F", left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, BLACK);
             draw_text("F", left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, flag_col);
             draw_text("F", left + PANEL_FONT_OFFSX - 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, flag_col);

@@ -85,7 +85,7 @@ impl GameTable {
     pub fn get_num_redflag(&self) -> usize {
         self.table
             .iter()
-            .filter(|p| p.is_redflag())
+            .filter(|p| p.get_userflg() == UserFlg::RedFlg)
             .count()
     }
 
@@ -287,7 +287,7 @@ impl GameTable {
         }
 
         // 旗の操作
-        self.table[self.cursol.index as usize].set_userflag();
+        self.table[self.cursol.index as usize].userflg();
         true
     }
 
@@ -340,7 +340,7 @@ impl GameTable {
             // 未開封のマスをカウントする
             close_cnt += 1;
 
-            if !self.table[index as usize].is_userflag() {
+            if self.table[index as usize].get_userflg() == UserFlg::None {
                 // 旗が立てられていない場合、未開封位置を保持する
                 close_list.push(index);
             } else {
@@ -681,6 +681,13 @@ impl GameTable {
         }
     }
 
+    pub fn all_userflag(&mut self){
+        for index in 0..self.width * self.height {
+            if self.table[index as usize].get_autoflag() == AutoSts::Danger {
+
+            }
+        }        
+    }
     //------------------------------
     // 盤面を描画する
     //------------------------------

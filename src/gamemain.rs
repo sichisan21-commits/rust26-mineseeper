@@ -127,7 +127,7 @@ impl GameMain {
 		self.tbldt.zoom.y = MAX_ZOOMY;
 
 		// 盤面のリアルサイズを求める
-		for x in 0..100 {
+		for _ in 0..100 {
 			let real_width = self.tbldt.width as f32 * PANEL_WIDTH * self.tbldt.zoom.x + WALL_LEFT + WALL_RIGHT;
 			let real_height = self.tbldt.height as f32 * PANEL_HEIGHT * self.tbldt.zoom.y + WALL_TOP+ WALL_BOTTOM;
 
@@ -318,6 +318,7 @@ impl GameMain {
 			self.tbldt.zoom.x += 0.2;
 			self.tbldt.zoom.y += 0.2;
 		}
+
 		// 下キーでズームイン
 		if is_key_pressed(KeyCode::Down) {
 			if self.tbldt.zoom.x > MIN_ZOOM {
@@ -326,6 +327,15 @@ impl GameMain {
 			}
 		}
 
+/*
+		// Ｆキーですべての危険パネルにフラグズームアウト
+		if is_key_pressed(KeyCode::F) {
+			for index in 0..self.tbldt.width * self.tbldt.width {
+				if self.tbldt.table[index as usize].get_autoflag() == AutoSts::Danger {
+				}
+			}
+		}
+ */
 		is_update
 	}
 

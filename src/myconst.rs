@@ -13,8 +13,8 @@ pub const MAX_ZOOMX: f32 = 10.0;
 pub const MAX_ZOOMY: f32 = 10.0;
 
 // 位置・サイズ
-pub const WALL_LEFT: f32 = 300.0;               // 左の壁
-pub const WALL_TOP: f32 = 40.0;                 // 上の壁
+pub const WALL_LEFT: f32 = 280.0;               // 左の壁
+pub const WALL_TOP: f32 = 60.0;                 // 上の壁
 pub const WALL_RIGHT: f32 = 20.0;               // 右の壁
 pub const WALL_BOTTOM: f32 = 20.0;              // 下の壁
 pub const SCROLL_LEFT: f32 = 150.0;				// スクロールを開始する横位置
@@ -46,12 +46,10 @@ pub const PANEL_COL_SAFETY: Color = Color::from_rgba(180, 220, 220, 255);
 // enum
 //----------------------------------------
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PanelSts {                         // パネルの状態
-	Close,                                  // 閉じている
-	Open,                                   // 開いている
-	BomOpen,                                // 踏まれた爆弾
-	RedFlg,                                 // 旗（赤）
-	BlueFlg,                                // 旗（青）
+pub enum UserFlg {                          // プレイヤーの立てた旗
+	None,									// なし
+	RedFlg,									// 旗（赤）
+	BlueFlg,								// 旗（青）
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
