@@ -15,7 +15,7 @@ pub const MAX_ZOOMY: f32 = 10.0;
 // 位置・サイズ
 pub const WALL_LEFT: f32 = 280.0;               // 左の壁
 pub const WALL_TOP: f32 = 60.0;                 // 上の壁
-pub const WALL_RIGHT: f32 = 20.0;               // 右の壁
+pub const WALL_RIGHT: f32 = 80.0;               // 右の壁
 pub const WALL_BOTTOM: f32 = 20.0;              // 下の壁
 pub const SCROLL_LEFT: f32 = 150.0;				// スクロールを開始する横位置
 pub const SCROLL_TOP: f32 = 150.0;				// スクロールを開始する立て位置
@@ -45,6 +45,38 @@ pub const PANEL_COL_SAFETY: Color = Color::from_rgba(180, 220, 220, 255);
 //----------------------------------------
 // enum
 //----------------------------------------
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum ChkBoxType {						// アシスト機能
+	CursolFlg,								// カーソル表示
+	UndoFlg,								// UNDO使用
+	BoldFlg,								// 確実に旗が立てられるマスの強調
+	DangOn, 	        	        	    // 危険マスの表示
+	SafeOn,    		        	        	// 安全マスの表示
+	DispAll,       		        	        // 前面表示
+	Title,									// タイトルへ戻る
+	Easy,									// 難易度：イージー
+	Normal,
+	Hard,
+	Edit,
+	Quit,
+	Start,
+}
+
+#[derive(Debug,PartialEq)]
+pub enum GameMode {							// ゲームの状態（全体）
+	Title,									// タイトル
+	Game,									// ゲームスタート（入力待ち）
+	Quit,									// ゲーム終了
+}
+
+#[derive(PartialEq)]
+pub enum GameStat {							// ゲームの状態
+	Ready,									// ゲームスタート（入力待ち）
+	Playing,								// プレイ中
+	Failed,									// ゲームオーバー
+	Success,								// ステージクリア
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UserFlg {                          // プレイヤーの立てた旗
 	None,									// なし

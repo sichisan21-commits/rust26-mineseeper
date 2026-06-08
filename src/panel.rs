@@ -84,6 +84,13 @@ impl Panel {
     }
 
     //------------------------------
+    // 旗のオン／オフ
+    //------------------------------
+    pub fn set_userflg(&mut self, flg:UserFlg) {
+        self.userflg = flg;
+    }
+
+    //------------------------------
     // 旗の有無
     //------------------------------
     pub fn get_userflg(&self) -> UserFlg {

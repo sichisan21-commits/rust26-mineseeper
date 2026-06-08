@@ -70,36 +70,6 @@ impl GameTable {
     }
 
     //------------------------------
-    // 開かれたパネルの数を取得
-    //------------------------------
-    pub fn get_opennum(&self) -> usize {
-        self.table
-            .iter()
-            .filter(|p| p.is_open())
-            .count()
-    }
-
-    //------------------------------
-    // 赤い旗の数を取得
-    //------------------------------
-    pub fn get_num_redflag(&self) -> usize {
-        self.table
-            .iter()
-            .filter(|p| p.get_userflg() == UserFlg::RedFlg)
-            .count()
-    }
-
-    //------------------------------
-    // 閉じているパネルの数
-    //------------------------------
-    pub fn get_num_close(&self) -> usize {
-        self.table
-            .iter()
-            .filter(|p| !p.is_open())
-            .count()
-    }
-
-    //------------------------------
     // カーソル位置をセットする
     //------------------------------
     pub fn set_mousepos(&mut self, mouse_pos: Vec2) -> MyCursol {
@@ -112,7 +82,7 @@ impl GameTable {
         };
         self.cursol
     }
-
+/*
     //------------------------------
     // 爆弾を配置する(テスト用)
     //------------------------------
@@ -127,6 +97,7 @@ impl GameTable {
             }
         }
     }
+ */
 
     //------------------------------
     // 爆弾を配置する
@@ -177,6 +148,37 @@ impl GameTable {
             }
         }
         true
+    }
+
+    //------------------------------
+    // 開かれたパネルの数を取得
+    //------------------------------
+    pub fn get_opennum(&self) -> usize {
+        self.table
+            .iter()
+            .filter(|p| p.is_open())
+            .count()
+    }
+
+    //------------------------------
+    // 赤い旗の数を取得
+    //------------------------------
+    pub fn get_num_redflag(&self) -> usize {
+        self.table
+            .iter()
+            .filter(|p| p.get_userflg() == UserFlg::RedFlg)
+            .count()
+    }
+
+    //------------------------------
+    // すべての危険マスに旗を立てる
+    //------------------------------
+    pub fn set_all_redflag(&mut self) {
+        for index in 0..self.width * self.height {
+            if self.table[index as usize].get_autoflag() == AutoSts::Danger {
+                self.table[index as usize].set_userflg(UserFlg::RedFlg);
+            }
+        }
     }
 
     //------------------------------
@@ -681,13 +683,6 @@ impl GameTable {
         }
     }
 
-    pub fn all_userflag(&mut self){
-        for index in 0..self.width * self.height {
-            if self.table[index as usize].get_autoflag() == AutoSts::Danger {
-
-            }
-        }        
-    }
     //------------------------------
     // 盤面を描画する
     //------------------------------
@@ -695,9 +690,8 @@ impl GameTable {
         // 盤面を表示
         for panel in &self.table {
             panel.draw_panel(self.cursol.x, self.cursol.y, is_allhint);
+
         }
-        // マウス位置表示
-        draw_circle(self.mouse_pos.x, self.mouse_pos.y, 10.0, RED);
     }
 
     //------------------------------

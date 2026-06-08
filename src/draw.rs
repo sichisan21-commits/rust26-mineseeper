@@ -14,11 +14,12 @@ pub fn dr_text(text: &str, pos_x:f32, pos_y:f32, size: f32,
 	let bgcol = Color::from_rgba(bg.0, bg.1, bg.2, bg.3);
 
 	// 輪郭を描画
+	let border = size * 0.025;
 	let y_offs = size * 0.6;
 	for x in -1..2 {
 		draw_text(text,
-			pos_x + x as f32,
-			pos_y + x as f32 + y_offs, size,
+			pos_x + x as f32 * border,
+			pos_y + x as f32 * border + y_offs, size,
 			bgcol);
 	}
 	draw_text(text, pos_x, pos_y + y_offs, size,fgcol);

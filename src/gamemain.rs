@@ -1,20 +1,11 @@
 use macroquad::prelude::*;
 use crate::draw::*;
-use crate::chkbox::{ChkBox,ChkBoxType};
+use crate::chkbox::ChkBoxMng;
 use crate::utils::*;
 use crate::myconst::*;
 use crate::gametable::GameTable;
 use crate::gametable::MyCursol;
 use crate::panel::Panel;
-
-#[derive(PartialEq)]
-enum GameStat {								// ゲームの状態
-	TITLE,									// タイトル
-	START,									// ゲームスタート（入力待ち）
-	PLAYNG,									// プレイ中
-	FAILED,									// 爆弾を踏んだ
-	SUCCESS,								// ステージクリア
-}
 
 struct TableInfo {							// 盤面の情報
 	width: i32,                             // 盤面の幅
@@ -28,13 +19,17 @@ struct TableInfo {							// 盤面の情報
 // ゲームメインデータ
 pub struct GameMain {
 	stat: GameStat,							// 0:初期画面/1:開始待ち/2:プレイ中
+	gamewait: f64,							// 入力を受け付けない時間 
+	waittime: f64,							// 受け付けない時間の開始
+	sttime: f64,							// プレイ開始時刻
+	nowtime: f64,							// 現在時刻
 	scr_width: f32,                         // ウインドウ幅
 	scr_height: f32,                        // ウインドウ幅
 	helplv: i32,                            // アシストレベル
 	mouse_pos: PosTable,                    // マウスカーソル位置
 	cursol: MyCursol,                       // カーソル位置
 	tbldt: TableInfo,                       // 盤面情報
-	chkbox: Vec<ChkBox>,					// 自作チェックボックス
+	chkbox: ChkBoxMng,						// 自作チェックボックス
 }
 
 //--------------------------------------------------
@@ -46,7 +41,11 @@ impl GameMain {
 	//------------------------------
 	pub fn new () -> GameMain {
 		let mut gm = GameMain {
-			stat: GameStat::TITLE,
+			stat: GameStat::Ready,
+			gamewait: 0.0,
+			waittime: 0.0,
+			sttime: 0.0,
+			nowtime: 0.0,
 			scr_width: screen_width(),
 			scr_height: screen_height(),
 			helplv: 0,
@@ -60,38 +59,43 @@ impl GameMain {
 				offs: Vec2 { x: WALL_LEFT, y: WALL_TOP },
 				zoom: Vec2 { x: MAX_ZOOMX, y: MAX_ZOOMY},
 			},
-			chkbox: Vec::new(),
+			chkbox: ChkBoxMng::new(),
 		};
 
 		// チェックボックスを作成
-		let mut pos_y = 30.0;
+		let mut pos_y = 150.0;
 		let fgcol: (u8,u8,u8,u8) = (0,0,0,255);
 		let bgcol: (u8,u8,u8,u8) = (255,255,255,255);
 
 		// カーソル表示
-		pos_y += 30.0; gm.chkbox.push(ChkBox::new(
+		pos_y += 30.0; gm.chkbox.add(
 			ChkBoxType::CursolFlg, String::from("CURSOL FLAME"),
-			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false));
+			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// UNDO使用
-		pos_y += 30.0; gm.chkbox.push(ChkBox::new(
+		pos_y += 30.0; gm.chkbox.add(
 			ChkBoxType::UndoFlg, String::from("USE UNDO"),
-			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false));
+			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// BOLD使用
-		pos_y += 30.0; gm.chkbox.push(ChkBox::new(
+		pos_y += 30.0; gm.chkbox.add(
 			ChkBoxType::BoldFlg, String::from("USE BOLD"),
-			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false));
+			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// 安全マス表示
-		pos_y += 30.0; gm.chkbox.push(ChkBox::new(
+		pos_y += 30.0; gm.chkbox.add(
 			ChkBoxType::SafeOn, String::from("SAFETY PANEL"),
-			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false));
+			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// 危険マス表示
-		pos_y += 30.0; gm.chkbox.push(ChkBox::new(
+		pos_y += 30.0; gm.chkbox.add(
 			ChkBoxType::DangOn, String::from("DANGER PANEL"),
-			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false));
+			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// 前面ヒントマス表示
-		pos_y += 30.0; gm.chkbox.push(ChkBox::new(
+		pos_y += 30.0; gm.chkbox.add(
 			ChkBoxType::DispAll, String::from("DISPLAY ALL"),
-			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false));
+			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
+		// タイトルへ戻る
+		pos_y += 50.0; gm.chkbox.add(
+			ChkBoxType::Title, String::from("[RETURN TITLE]"),
+			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
+		gm.chkbox.view_box(ChkBoxType::Title, false);
 
 		gm
 	}
@@ -109,13 +113,23 @@ impl GameMain {
 	//------------------------------
 	// 盤面の初期化
 	//------------------------------
-	pub fn initial_game(&mut self) {
+	pub fn initial_game(&mut self, wait: f64) {
+		// チェックボックスを初期化する
+		self.chkbox.clear_flg();
+
 		// 盤面を初期化する
 		self.tbldt.table = GameTable::new(self.tbldt.width, self.tbldt.height, self.tbldt.bom_num);
 		self.tbldt.table.initial(self.tbldt.width, self.tbldt.height);
 		self.set_tablepos();
+
+		// 待ち時間の指定があるなら設定
+		self.gamewait = wait;
+		if wait != 0.0 {
+			self.waittime = get_time();
+		}
+
 		// クリック待ち
-		self.stat = GameStat::START;
+		self.stat = GameStat::Ready;
 	}
 
 	//------------------------------
@@ -157,8 +171,24 @@ impl GameMain {
 	//------------------------------
 	// 入力制御
 	//------------------------------
-	pub fn playcontrol(&mut self) {
+	pub fn playcontrol(&mut self) -> GameMode {
+		let mut game_mode = GameMode::Game;
+
+		// 待ち時間が設定されている場合、時間消化までなにもしない
+		if self.gamewait != 0.0 {
+			if get_time() - self.waittime < self.gamewait {
+				return game_mode;
+			}
+			self.gamewait = 0.0;
+		}
+
+		// 盤面の更新フラグを初期化
 		let mut is_update = false;
+
+		// ゲームが開始されているなら現在時刻更新
+		if self.stat == GameStat::Playing {
+			self.nowtime = get_time();
+		}
 
 		// マウス移動処理
 		self.mouse_move();
@@ -167,14 +197,18 @@ impl GameMain {
 		is_update |= self.click_tbl_left();
 		is_update |= self.click_tbl_right();
 
+		// 「タイトルへ」が選択されたらタイトルへ戻る
+		if self.chkbox.get_flg(ChkBoxType::Title) {
+			return GameMode::Title;
+		}
+
 		// キーボード入力処理
 		let is_keyupdate = self.keycontrol();
 
 		// ヒントを作成する
-		let bold_flg = self.get_chkbox_flg(ChkBoxType::BoldFlg);
-		let safe_on = self.get_chkbox_flg(ChkBoxType::SafeOn);
-		let dang_on = self.get_chkbox_flg(ChkBoxType::DangOn);
-		println!("is_update={},SafeOn={},DangOn={}",is_update,safe_on,dang_on);
+		let bold_flg = self.chkbox.get_flg(ChkBoxType::BoldFlg);
+		let safe_on = self.chkbox.get_flg(ChkBoxType::SafeOn);
+		let dang_on = self.chkbox.get_flg(ChkBoxType::DangOn);
 		if is_update || is_keyupdate {
 			self.tbldt.table.clear_help(self.helplv);
 			if bold_flg {
@@ -194,26 +228,16 @@ impl GameMain {
 			// 爆弾を除くパネルが全て開かれたか
 			let close_num = self.tbldt.width * self.tbldt.height - self.tbldt.bom_num - self.tbldt.table.get_opennum() as i32;
 			if close_num == 0 {
-				self.stat = GameStat::SUCCESS;
+				self.stat = GameStat::Success;
 			}
 
 			// 爆弾が開かれた場合はステータスを変える
 			if self.tbldt.table.open_bomnum() > 0 {
-				self.stat = GameStat::FAILED;
+				self.stat = GameStat::Failed;
 			}
 		}
-	}
 
-	//------------------------------
-	// チェックボックスからフラグを取得
-	//------------------------------
-	fn get_chkbox_flg(&self, mytype: ChkBoxType) -> bool {
-		for index in 0..self.chkbox.len() {
-			if self.chkbox[index].get_type() == mytype {
-				return self.chkbox[index].get_flg()
-			}
-		}
-		false
+		game_mode
 	}
 
 	//------------------------------
@@ -291,10 +315,10 @@ impl GameMain {
 	// キーボード入力処理
 	//------------------------------
 	fn keycontrol(&mut self) -> bool {
-		let mut is_update = false;
+		let is_update = false;
 
 		//--- UNDO 処理 ---//
-		if self.get_chkbox_flg(ChkBoxType::UndoFlg) {
+		if self.chkbox.get_flg(ChkBoxType::UndoFlg) {
 			if is_key_pressed(KeyCode::U) {
 				// UNDO情報の最新＝現在なので、UNDO中でなければ
 				// １回余計に UNDO する
@@ -302,7 +326,7 @@ impl GameMain {
 					self.tbldt.table.table_undo();
 				}
 				self.tbldt.table.table_undo();
-				self.stat = GameStat::PLAYNG;
+				self.stat = GameStat::Playing;
 				return false;
 			}
 
@@ -327,16 +351,12 @@ impl GameMain {
 			}
 		}
 
-/*
 		// Ｆキーですべての危険パネルにフラグズームアウト
 		if is_key_pressed(KeyCode::F) {
-			for index in 0..self.tbldt.width * self.tbldt.width {
-				if self.tbldt.table[index as usize].get_autoflag() == AutoSts::Danger {
-				}
-			}
+			self.tbldt.table.set_all_redflag();
 		}
- */
-		is_update
+ 
+ 		is_update
 	}
 
 	//------------------------------
@@ -369,9 +389,7 @@ impl GameMain {
 		}
 
 		// チェックボックス判定
-		for index in 0..self.chkbox.len() {
-			is_update |= self.chkbox[index].click(self.mouse_pos.x, self.mouse_pos.y);
-		}
+		is_update |= self.chk_box_click();
 
 		// カーソルが盤面外ならなにもしない
 		if self.cursol.index== -1 {
@@ -379,20 +397,25 @@ impl GameMain {
 		}
 
 		// ゲームが待機中なら初期化しなおす
-		if self.stat == GameStat::SUCCESS || self.stat == GameStat::FAILED {
-			self.initial_game();
-			self.stat = GameStat::START;
+		if self.stat == GameStat::Success || self.stat == GameStat::Failed {
+			self.initial_game(1.0);
+			self.stat = GameStat::Ready;
 			return true
 		}
 
 		// ゲームは開始し、クリック待ちなら爆弾を生成する
-		if self.stat == GameStat::START {
+		if self.stat == GameStat::Ready {
+			// ゲーム開始時刻を保持
+			self.sttime = get_time();
+			self.nowtime = self.sttime;
+
+			// 盤面を作成
 			let mut table_backup: Vec<Panel> = Vec::new();
 
 			// 初手ある程度開かせる
 			let target = self.tbldt.width * self.tbldt.height * 5 / 100;
 			let mut max = 0;
-			for x in 0..100 {
+			for _ in 0..100 {
 				self.tbldt.table.setting_bom(self.tbldt.bom_num);
 				self.tbldt.table.click_left();
 				let opennum = self.tbldt.table.get_opennum();
@@ -404,14 +427,14 @@ impl GameMain {
 				if target <= opennum as i32 {
 					break;
 				}
-				self.initial_game();
+				self.initial_game(0.0);
 			}
 			// 最も開いた盤面を復旧
 			self.tbldt.table.tbl_restore(table_backup);
 
 			// 今の盤面を保存する
 			self.tbldt.table.undo_push();
-			self.stat = GameStat::PLAYNG;
+			self.stat = GameStat::Playing;
 		}
 
 		// クリックしたことを盤面に伝える
@@ -419,10 +442,22 @@ impl GameMain {
 		is_update
 	}
 
+	//--------------------------------------------------
+	// チェックボックスのクリック処理
+	//--------------------------------------------------
+	fn chk_box_click(&mut self) -> bool{
+		if let Some((_kind, _flg)) =
+			self.chkbox.click(self.mouse_pos.x, self.mouse_pos.y) {
+			true
+		} else {
+			false
+		}
+	}
+
 	//------------------------------
 	// ゲーム全体の描画
 	//------------------------------
-	pub fn draw(&mut self) {
+	pub fn draw(&self) {
 		// 盤面全体を塗りつぶす
 		clear_window(LAYOUT_COLOR);
 
@@ -441,35 +476,55 @@ impl GameMain {
 		// ゲームの状態表示
 		let bg = (0,0,0,255);
 		let (text, fg):(&str, (u8,u8,u8,u8)) =
-			if self.stat == GameStat::SUCCESS {
-				("[ CLEAR!! ]", (0,255,0,255))
-			} else if self.stat == GameStat::FAILED {
-				("[ FAILED!! ]", (255,0,0,255))
+			if self.stat == GameStat::Success {
+				("[CLEAR!!]", (0,255,0,255))
+			} else if self.stat == GameStat::Failed {
+				("[FAILED!!]", (255,0,0,255))
 			} else {
 				("", (0,0,0,0))
 			};
-		dr_text(text, 0.0, 35.0, FONT_SIZE, fg, bg);
+		dr_text(text, 10.0, 130.0, FONT_SIZE, fg, bg);
 
 		// チェックボックスを表示する
-		for chkbox in &self.chkbox {
-			chkbox.draw();
-		}
+		self.chkbox.draw();
 	
 		// UNDO がオン
-		if self.get_chkbox_flg(ChkBoxType::UndoFlg) {
+		if self.chkbox.get_flg(ChkBoxType::UndoFlg) {
 			drawtextln(&format!("'U'=UNDO/'R'=REDO"), 1, 17, FONT_SIZE, BLACK);
 		}
 
-		// マウス位置表示
-		draw_circle(self.mouse_pos.x, self.mouse_pos.y, 5.0, BLACK);
+		// ゲーム時間を表示
+		draw_rectangle(10.0, WALL_TOP,
+			WALL_LEFT - 70.0,FONT_SIZE * 1.2, BLACK);
+		let (timestr, fg):(String, (u8,u8,u8,u8)) =
+			// 時間が未初期化の場合灰色で表示
+		if self.stat == GameStat::Ready {
+			(get_time_str(0.0,0.0), (128,128,128,255))
+		} else {
+			// ステータスに応じて文字色を変更
+			let fg:(u8,u8,u8,u8) = match self.stat {
+	            GameStat::Playing   => (0,255,255,255),
+    	        GameStat::Success  => (255,255,0,255),
+        	    _                  => (255,0,0,255),
+			};
+			(get_time_str(self.sttime, self.nowtime), fg)
+		};
+		dr_text(&timestr,
+			20.0,WALL_TOP + 5.0, FONT_SIZE * 1.5,
+			fg, (0,0,0,255));
 
 		// デバッグ
-		dr_text(&format!("SCREEN:{},{} ZOOM:{},{}",self.scr_width,self.scr_height,self.tbldt.zoom.x, self.tbldt.zoom.y),
-			0.0,500.0,FONT_SIZE,(255,255,255,255),(0,0,0,255));
-		dr_text(&format!("MOUSE:{},{}",self.mouse_pos.x,self.mouse_pos.y),
-			0.0,530.0,FONT_SIZE,(255,255,255,255),(0,0,0,255));
-		dr_text(&format!("CURSOL:{},{}:{}",self.cursol.x,self.cursol.y,self.cursol.index),
-			0.0,560.0,FONT_SIZE,(255,255,255,255),(0,0,0,255));
+		let mut pos_y = 400.0;
+		let font_size = 30.0;
+		let font_offs = 30.0;
+		pos_y += font_offs;dr_text(&format!("SCREEN:{},{} ZOOM:{},{}",self.scr_width,self.scr_height,self.tbldt.zoom.x, self.tbldt.zoom.y),
+			0.0, pos_y,font_size,(255,255,255,255),(0,0,0,255));
+		pos_y += font_offs;dr_text(&format!("MOUSE:{},{}",self.mouse_pos.x,self.mouse_pos.y),
+			0.0, pos_y,font_size,(255,255,255,255),(0,0,0,255));
+		pos_y += font_offs;dr_text(&format!("CURSOL:{},{}:{}",self.cursol.x,self.cursol.y,self.cursol.index),
+			0.0, pos_y,font_size,(255,255,255,255),(0,0,0,255));
+		pos_y += font_offs;dr_text(&format!("TIME:{}",get_time()),
+			0.0, pos_y,font_size,(255,255,255,255),(0,0,0,255));
 
 	}
 
@@ -499,10 +554,10 @@ impl GameMain {
 			self.tbldt.height as f32 * PANEL_HEIGHT + offs * 2.0, BLUE);
 
 		// 盤面の描画
-		self.tbldt.table.draw_panel(self.get_chkbox_flg(ChkBoxType::DispAll));
+		self.tbldt.table.draw_panel(self.chkbox.get_flg(ChkBoxType::DispAll));
 
 		// カーソル周りに枠を表示
-		if self.get_chkbox_flg(ChkBoxType::CursolFlg) {
+		if self.chkbox.get_flg(ChkBoxType::CursolFlg) {
 			self.tbldt.table.draw_curasol();
 		}
 
@@ -510,3 +565,9 @@ impl GameMain {
 		set_default_camera();
 	}
 }
+
+fn get_time_str(sttime:f64, nowtime: f64) -> String {
+	let sec = (nowtime - sttime) as i32;
+	format!("{:02}:{:02}", sec / 60, sec % 60)
+}
+

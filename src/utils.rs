@@ -26,3 +26,13 @@ pub fn get_index(cursol_x:i32, cursol_y:i32, width:i32, height:i32) -> i32 {
        }
     cursol_y * width + cursol_x
 }
+
+//------------------------------
+// 指定時間待つ（秒）
+//------------------------------
+pub async fn wait_sec(sec: f32) {
+    let start = get_time();
+    while get_time() - start < sec as f64 {
+        next_frame().await;
+    }
+}
