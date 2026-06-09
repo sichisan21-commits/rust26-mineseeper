@@ -1,10 +1,8 @@
 use macroquad::prelude::*;
-use crate::myconst::*;
 use crate::draw::*;
 
-
-struct ChkBox{
-	mytype: ChkBoxType,							// チェックボックスのタイプ
+struct ChkBox<T>{
+	mytype: T,									// チェックボックスのタイプ
 	viewbox: bool,								// [*] の表示有無
 	text: String,								// 表示文字列
 	left: f32,									// 表示左位置
@@ -15,18 +13,22 @@ struct ChkBox{
 	flg: bool,									// チェックの状態
 }
 
-pub struct ChkBoxMng {						// 管理テーブル
-	chkboxs: Vec<ChkBox>,					// チェックボックス配列
+pub struct ChkBoxMng<T> {						// 管理テーブル
+	chkboxs: Vec<ChkBox<T>>,					// チェックボックス配列
 }
 
 //--------------------------------------------------
 // チェックボックス管理テーブル
 //--------------------------------------------------
-impl ChkBoxMng{
+impl<T> ChkBoxMng<T>
+    where
+        T: std::fmt::Debug,
+        T: Copy + PartialEq,
+	{
 	//--------------------------------------------------
 	// 初期化
 	//--------------------------------------------------
-	pub fn new() -> ChkBoxMng {
+	pub fn new() -> ChkBoxMng<T> {
 		ChkBoxMng {
 			chkboxs: Vec::new(),
 		}
@@ -36,7 +38,7 @@ impl ChkBoxMng{
 	// 追加
 	//--------------------------------------------------
 	pub fn add(&mut self,
-		mytype: ChkBoxType, text: String, left: f32, top: f32, size: f32,
+		mytype: T, text: String, left: f32, top: f32, size: f32,
 		fgcol: (u8,u8,u8,u8),bgcol: (u8,u8,u8,u8), flg: bool) {
 			let viewbox = true;
 			self.chkboxs.push(ChkBox {
@@ -54,7 +56,7 @@ impl ChkBoxMng{
 	//------------------------------
 	// チェックボックスのチェックマークオン／オフ
 	//------------------------------
-	pub fn view_box(&mut self, mytype: ChkBoxType, boxon: bool) {
+	pub fn view_box(&mut self, mytype: T, boxon: bool) {
 		for chkbox in &mut self.chkboxs {
 			if chkbox.get_type() == mytype {
 				chkbox.view_box(boxon);
@@ -65,7 +67,7 @@ impl ChkBoxMng{
 	//------------------------------
 	// チェックボックスからフラグを取得
 	//------------------------------
-	pub fn get_flg(&self, mytype: ChkBoxType) -> bool {
+	pub fn get_flg(&self, mytype: T) -> bool {
 		for chkbox in &self.chkboxs {
 			if chkbox.get_type() == mytype {
 				return chkbox.get_flg()
@@ -77,7 +79,7 @@ impl ChkBoxMng{
 	//------------------------------
 	// チェックボックスからフラグを取得
 	//------------------------------
-	pub fn set_flg(&mut self, mytype: ChkBoxType, flg: bool) {
+	pub fn set_flg(&mut self, mytype: T, flg: bool) {
 		for chkbox in &mut self.chkboxs {
 			if chkbox.get_type() == mytype {
 				chkbox.set_flg(flg);
@@ -97,7 +99,7 @@ impl ChkBoxMng{
 	//------------------------------
 	// クリック判定
 	//------------------------------
-	pub fn click(&mut self, mouse_x: f32, mouse_y: f32) -> Option<(ChkBoxType, bool)> {
+	pub fn click(&mut self, mouse_x: f32, mouse_y: f32) -> Option<(T, bool)> {
 		// 全てのチェックボックスのクリック判定
 		for chkbox in &mut self.chkboxs {
 			if chkbox.click(mouse_x, mouse_y) {
@@ -121,7 +123,11 @@ impl ChkBoxMng{
 //--------------------------------------------------
 // 実装
 //--------------------------------------------------
-impl ChkBox {
+impl<T> ChkBox<T>
+    where
+        T: std::fmt::Debug,
+        T: Copy + PartialEq,
+	{
 	//--------------------------------------------------
 	// チェックボックスをクリック（座標が一致していれば）
 	//--------------------------------------------------
@@ -146,7 +152,7 @@ impl ChkBox {
 	//--------------------------------------------------
 	// タイプを返却する
 	//--------------------------------------------------
-	pub fn get_type(&self) -> ChkBoxType {
+	pub fn get_type(&self) -> T {
 		self.mytype
 	}
 

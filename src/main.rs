@@ -17,7 +17,8 @@ use myconst::*;
 // main
 //--------------------------------------------------
 #[macroquad::main("Test Window")]
-async fn main() {
+async fn main()
+	{
 	rand::srand(miniquad::date::now() as u64);
 
 	// タイトル画面とゲームメインを初期化する

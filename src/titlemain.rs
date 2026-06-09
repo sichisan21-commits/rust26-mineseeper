@@ -5,22 +5,22 @@ use crate::utils::*;
 use crate::draw::*;
 
 pub struct TitleMain {
-	chkbox: ChkBoxMng,                      // チェックボックス
+	chkbox: ChkBoxMng<ChkBoxTitle>,          // チェックボックス
 	mouse_pos: PosTable,                    // マウスカーソル位置
 }
 
 //--------------------------------------------------
 // 実装
 //--------------------------------------------------
-impl TitleMain {                                // タイトル画面
+impl TitleMain {								// タイトル画面
 	//----------------------------------------
 	// 初期化
 	//----------------------------------------
-	pub fn new() -> TitleMain {
-		let mut tm = TitleMain {
-			chkbox: ChkBoxMng::new(),
-			mouse_pos: PosTable{ x:0.0, y:0.0},
-		};
+    pub fn new() -> TitleMain {
+        let mut gm = TitleMain {
+            chkbox: ChkBoxMng::new(),
+            mouse_pos: PosTable { x: 0.0, y: 0.0 },
+        };
 
 		// チェックボックス作成
 		let pos_x = 30.0;
@@ -29,34 +29,34 @@ impl TitleMain {                                // タイトル画面
 		let bgcol: (u8,u8,u8,u8) = (0,0,0,255);
 		let fontsize = 60.0;
 		let offs = 60.0;
-
-		pos_y += offs; tm.chkbox.add(
-			ChkBoxType::Easy, String::from("EASY"),
+	
+		pos_y += offs; gm.chkbox.add(
+			ChkBoxTitle::Easy, String::from("EASY"),
 			pos_x, pos_y, fontsize, fgcol, bgcol, false);
-		pos_y += offs; tm.chkbox.add(
-			ChkBoxType::Normal, String::from("NORMAL"),
+		pos_y += offs; gm.chkbox.add(
+			ChkBoxTitle::Normal, String::from("NORMAL"),
 			pos_x, pos_y, fontsize, fgcol, bgcol, true);
-		pos_y += offs; tm.chkbox.add(
-			ChkBoxType::Hard, String::from("HARD"),
+		pos_y += offs; gm.chkbox.add(
+			ChkBoxTitle::Hard, String::from("HARD"),
 			pos_x, pos_y, fontsize, fgcol, bgcol, false);
-		pos_y += offs; tm.chkbox.add(
-			ChkBoxType::Edit, String::from("EDIT"),
+		pos_y += offs; gm.chkbox.add(
+			ChkBoxTitle::Edit, String::from("EDIT"),
 			pos_x, pos_y, fontsize, fgcol, bgcol, false);
 
 		// START
 		let mut pos_y = 30.0;
 		let pos_x = 300.0;
-		pos_y += offs; tm.chkbox.add(
-			ChkBoxType::Start, String::from("[START]"),
+		pos_y += offs; gm.chkbox.add(
+			ChkBoxTitle::Start, String::from("[START]"),
 			pos_x, pos_y, fontsize, (0,255,0,255), bgcol, false);
-		tm.chkbox.view_box(ChkBoxType::Start, false);
+		gm.chkbox.view_box(ChkBoxTitle::Start, false);
 			// QUIT
-		pos_y += offs; tm.chkbox.add(
-			ChkBoxType::Quit, String::from("[QUIT]"),
+		pos_y += offs; gm.chkbox.add(
+			ChkBoxTitle::Quit, String::from("[QUIT]"),
 			pos_x, pos_y, fontsize, (255,0,0,255), bgcol,false);
-		tm.chkbox.view_box(ChkBoxType::Quit, false);
+		gm.chkbox.view_box(ChkBoxTitle::Quit, false);
 
-		tm
+		gm
 	}
 
 	//----------------------------------------
@@ -64,7 +64,7 @@ impl TitleMain {                                // タイトル画面
 	//----------------------------------------
 	pub fn initial(&mut self)  {
 		self.chkbox.clear_flg();
-		self.chkbox.set_flg(ChkBoxType::Normal, true);
+		self.chkbox.set_flg(ChkBoxTitle::Normal, true);
 	}
 
 	//----------------------------------------
@@ -83,12 +83,12 @@ impl TitleMain {                                // タイトル画面
 		}
 
 		// Quit が選択された場合終了
-		if self.chkbox.get_flg(ChkBoxType::Quit) {
+		if self.chkbox.get_flg(ChkBoxTitle::Quit) {
 			return GameMode::Quit
 		}
 
 		// Start が選択された場合ゲームに遷移
-		if self.chkbox.get_flg(ChkBoxType::Start) {
+		if self.chkbox.get_flg(ChkBoxTitle::Start) {
 			return GameMode::Game
 		}
 
@@ -100,16 +100,15 @@ impl TitleMain {                                // タイトル画面
 	// 左クリック処理
 	//----------------------------------------
 	pub fn click_left(&mut self) -> bool {
-		let mut  is_update = false;
 		if !is_mouse_button_pressed(MouseButton::Left) {
-			return is_update;
+			return false
 		}
 
 		// チェックボックスのクリック処理
 		if let Some((kind, _flg)) = self.chkbox.click(self.mouse_pos.x, self.mouse_pos.y) {
 			match kind {
 				// スタートが押された場合は何もせず真を返す
-				ChkBoxType::Start => {
+				ChkBoxTitle::Start => {
 					true
 				}
 				// それ以外はそのチェックボックスだけをオンにする
@@ -129,9 +128,9 @@ impl TitleMain {                                // タイトル画面
 	// タイトル制御
 	//----------------------------------------
 	pub fn get_setting(&self) -> (i32,i32,i32) {
-		if self.chkbox.get_flg(ChkBoxType::Easy) {
+		if self.chkbox.get_flg(ChkBoxTitle::Easy) {
 			(9,9,10)
-		} else if self.chkbox.get_flg(ChkBoxType::Normal) {
+		} else if self.chkbox.get_flg(ChkBoxTitle::Normal) {
 			(16,16,40)
 		} else {
 			(30,16,99)

@@ -46,7 +46,17 @@ pub const PANEL_COL_SAFETY: Color = Color::from_rgba(180, 220, 220, 255);
 // enum
 //----------------------------------------
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum ChkBoxType {						// アシスト機能
+pub enum ChkBoxTitle {						// タイトル用チェックボックス群
+	Easy,									// イージー
+	Normal,									// ノーマル
+	Hard,									// ハード
+	Edit,									// エディット
+	Start,									// 開始
+	Quit,									// 終了
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum ChkBoxGame {						// ゲーム用チェックボックス
 	CursolFlg,								// カーソル表示
 	UndoFlg,								// UNDO使用
 	BoldFlg,								// 確実に旗が立てられるマスの強調
@@ -54,12 +64,6 @@ pub enum ChkBoxType {						// アシスト機能
 	SafeOn,    		        	        	// 安全マスの表示
 	DispAll,       		        	        // 前面表示
 	Title,									// タイトルへ戻る
-	Easy,									// 難易度：イージー
-	Normal,
-	Hard,
-	Edit,
-	Quit,
-	Start,
 }
 
 #[derive(Debug,PartialEq)]

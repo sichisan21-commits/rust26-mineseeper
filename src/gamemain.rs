@@ -29,7 +29,7 @@ pub struct GameMain {
 	mouse_pos: PosTable,                    // マウスカーソル位置
 	cursol: MyCursol,                       // カーソル位置
 	tbldt: TableInfo,                       // 盤面情報
-	chkbox: ChkBoxMng,						// 自作チェックボックス
+	chkbox: ChkBoxMng<ChkBoxGame>,			// 自作チェックボックス
 }
 
 //--------------------------------------------------
@@ -69,33 +69,33 @@ impl GameMain {
 
 		// カーソル表示
 		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxType::CursolFlg, String::from("CURSOL FLAME"),
+			ChkBoxGame::CursolFlg, String::from("CURSOL FLAME"),
 			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// UNDO使用
 		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxType::UndoFlg, String::from("USE UNDO"),
+			ChkBoxGame::UndoFlg, String::from("USE UNDO"),
 			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// BOLD使用
 		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxType::BoldFlg, String::from("USE BOLD"),
+			ChkBoxGame::BoldFlg, String::from("USE BOLD"),
 			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// 安全マス表示
 		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxType::SafeOn, String::from("SAFETY PANEL"),
+			ChkBoxGame::SafeOn, String::from("SAFETY PANEL"),
 			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// 危険マス表示
 		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxType::DangOn, String::from("DANGER PANEL"),
+			ChkBoxGame::DangOn, String::from("DANGER PANEL"),
 			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// 前面ヒントマス表示
 		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxType::DispAll, String::from("DISPLAY ALL"),
+			ChkBoxGame::DispAll, String::from("DISPLAY ALL"),
 			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// タイトルへ戻る
 		pos_y += 50.0; gm.chkbox.add(
-			ChkBoxType::Title, String::from("[RETURN TITLE]"),
+			ChkBoxGame::Title, String::from("[RETURN TITLE]"),
 			1.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
-		gm.chkbox.view_box(ChkBoxType::Title, false);
+		gm.chkbox.view_box(ChkBoxGame::Title, false);
 
 		gm
 	}
@@ -172,12 +172,10 @@ impl GameMain {
 	// 入力制御
 	//------------------------------
 	pub fn playcontrol(&mut self) -> GameMode {
-		let mut game_mode = GameMode::Game;
-
 		// 待ち時間が設定されている場合、時間消化までなにもしない
 		if self.gamewait != 0.0 {
 			if get_time() - self.waittime < self.gamewait {
-				return game_mode;
+				return GameMode::Game;
 			}
 			self.gamewait = 0.0;
 		}
@@ -198,7 +196,7 @@ impl GameMain {
 		is_update |= self.click_tbl_right();
 
 		// 「タイトルへ」が選択されたらタイトルへ戻る
-		if self.chkbox.get_flg(ChkBoxType::Title) {
+		if self.chkbox.get_flg(ChkBoxGame::Title) {
 			return GameMode::Title;
 		}
 
@@ -206,9 +204,9 @@ impl GameMain {
 		let is_keyupdate = self.keycontrol();
 
 		// ヒントを作成する
-		let bold_flg = self.chkbox.get_flg(ChkBoxType::BoldFlg);
-		let safe_on = self.chkbox.get_flg(ChkBoxType::SafeOn);
-		let dang_on = self.chkbox.get_flg(ChkBoxType::DangOn);
+		let bold_flg = self.chkbox.get_flg(ChkBoxGame::BoldFlg);
+		let safe_on = self.chkbox.get_flg(ChkBoxGame::SafeOn);
+		let dang_on = self.chkbox.get_flg(ChkBoxGame::DangOn);
 		if is_update || is_keyupdate {
 			self.tbldt.table.clear_help(self.helplv);
 			if bold_flg {
@@ -237,7 +235,7 @@ impl GameMain {
 			}
 		}
 
-		game_mode
+		GameMode::Game
 	}
 
 	//------------------------------
@@ -318,7 +316,7 @@ impl GameMain {
 		let is_update = false;
 
 		//--- UNDO 処理 ---//
-		if self.chkbox.get_flg(ChkBoxType::UndoFlg) {
+		if self.chkbox.get_flg(ChkBoxGame::UndoFlg) {
 			if is_key_pressed(KeyCode::U) {
 				// UNDO情報の最新＝現在なので、UNDO中でなければ
 				// １回余計に UNDO する
@@ -489,7 +487,7 @@ impl GameMain {
 		self.chkbox.draw();
 	
 		// UNDO がオン
-		if self.chkbox.get_flg(ChkBoxType::UndoFlg) {
+		if self.chkbox.get_flg(ChkBoxGame::UndoFlg) {
 			drawtextln(&format!("'U'=UNDO/'R'=REDO"), 1, 17, FONT_SIZE, BLACK);
 		}
 
@@ -554,10 +552,10 @@ impl GameMain {
 			self.tbldt.height as f32 * PANEL_HEIGHT + offs * 2.0, BLUE);
 
 		// 盤面の描画
-		self.tbldt.table.draw_panel(self.chkbox.get_flg(ChkBoxType::DispAll));
+		self.tbldt.table.draw_panel(self.chkbox.get_flg(ChkBoxGame::DispAll));
 
 		// カーソル周りに枠を表示
-		if self.chkbox.get_flg(ChkBoxType::CursolFlg) {
+		if self.chkbox.get_flg(ChkBoxGame::CursolFlg) {
 			self.tbldt.table.draw_curasol();
 		}
 
