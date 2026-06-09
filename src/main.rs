@@ -5,6 +5,7 @@ mod titlemain;
 mod gamemain;
 mod gametable;
 mod panel;
+mod inference;
 mod utils;
 mod draw;
 
@@ -41,7 +42,7 @@ async fn main()
 			if appmode == GameMode::Game {
 				let (width, height, bom_num) = title_data.get_setting();
 				game_data.set_gameinfo(width, height, bom_num);
-				game_data.initial_game(0.03);
+				game_data.initial_game(START_WAIT);
 			}
 		}
 

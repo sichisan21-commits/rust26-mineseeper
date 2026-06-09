@@ -25,23 +25,23 @@ impl TitleMain {								// タイトル画面
 		// チェックボックス作成
 		let pos_x = 50.0;
 		let mut pos_y = 70.0;
-		let fgcol: (u8,u8,u8,u8) = (255,255,0,255);
-		let bgcol: (u8,u8,u8,u8) = (0,0,0,255);
+		let fgcol = String::from("FFFF00FF");
+		let bgcol = String::from("0000A0A0");
 		let offs = 60.0;
 		let fontsize = 60.0;
 	
 		pos_y += offs; gm.chkbox.add(
 			ChkBoxTitle::Easy, String::from("EASY"),
-			pos_x, pos_y, fontsize, fgcol, bgcol, false);
+			pos_x, pos_y, fontsize, &fgcol, &bgcol, false);
 		pos_y += offs; gm.chkbox.add(
 			ChkBoxTitle::Normal, String::from("NORMAL"),
-			pos_x, pos_y, fontsize, fgcol, bgcol, true);
+			pos_x, pos_y, fontsize, &fgcol, &bgcol, true);
 		pos_y += offs; gm.chkbox.add(
 			ChkBoxTitle::Hard, String::from("HARD"),
-			pos_x, pos_y, fontsize, fgcol, bgcol, false);
+			pos_x, pos_y, fontsize, &fgcol, &bgcol, false);
 		pos_y += offs; gm.chkbox.add(
 			ChkBoxTitle::Edit, String::from("EDIT"),
-			pos_x, pos_y, fontsize, fgcol, bgcol, false);
+			pos_x, pos_y, fontsize, &fgcol, &bgcol, false);
 		gm.chkbox.active(ChkBoxTitle::Edit, false);
 
 		// START or QUIT
@@ -49,10 +49,10 @@ impl TitleMain {								// タイトル画面
 		let offs =70.0;
 		pos_y += offs; gm.chkbox.add(
 			ChkBoxTitle::Start, String::from("[START]"),
-			pos_x, pos_y, fontsize, (0,255,0,255), bgcol, false);
+			pos_x, pos_y, fontsize, &String::from("00FF00FF"), &bgcol, false);
 		pos_y += offs; gm.chkbox.add(
 			ChkBoxTitle::Quit, String::from("[QUIT]"),
-			pos_x, pos_y, fontsize, (255,0,0,255), bgcol,false);
+			pos_x, pos_y, fontsize, &String::from("FF0000FF"), &bgcol,false);
 		gm.chkbox.view_box(ChkBoxTitle::Start, false);
 		gm.chkbox.view_box(ChkBoxTitle::Quit, false);
 
@@ -141,7 +141,10 @@ impl TitleMain {								// タイトル画面
 		draw_rectangle(0.0, 60.0, 700.0, 20.0, BLUE);
 
 		dr_text("MINE SWEEPER", 20.0, 10.0, 100.0,
-			(0,0,0,255),(255,255,255,255));
+			&String::from("0000A0FF"),&String::from("FFFFFFFF"));
+
+		dr_text("v1.0", 570.0, 43.0, 50.0,
+			&String::from("0000A0FF"),&String::from("FFFFFFCC"));
 
 		// チェックボックスを描く
 		self.chkbox.draw();

@@ -9,8 +9,8 @@ struct ChkBox<T>{
 	left: f32,									// 表示左位置
 	top: f32,									// 表示上位置
 	size: f32,									// フォントサイズ
-	fgcol: (u8,u8,u8,u8),						// 前面色
-	bgcol: (u8,u8,u8,u8),						// 輪郭色
+	fgcol: String,								// 前面色
+	bgcol: String,								// 輪郭色
 	flg: bool,									// チェックの状態
 }
 
@@ -39,8 +39,8 @@ impl<T> ChkBoxMng<T>
 	// 追加
 	//--------------------------------------------------
 	pub fn add(&mut self,
-		mytype: T, text: String, left: f32, top: f32, size: f32,
-		fgcol: (u8,u8,u8,u8),bgcol: (u8,u8,u8,u8), flg: bool) {
+		mytype:T, text:String, left:f32, top:f32, size:f32,
+		fgcol:&String, bgcol:&String, flg:bool) {
 			let viewbox = true;
 			self.chkboxs.push(ChkBox {
 				mytype,
@@ -50,8 +50,8 @@ impl<T> ChkBoxMng<T>
 				left,
 				top,
 				size,
-				fgcol,
-				bgcol,
+				fgcol: fgcol.clone(),
+				bgcol: bgcol.clone(),
 				flg});
 	}
 
@@ -203,6 +203,7 @@ impl<T> ChkBox<T>
 	// 描画
 	//--------------------------------------------------
 	pub fn draw(&self) {
+		// チェック表示あり
 		let check = {
 			if !self.viewbox {
 				""
@@ -212,14 +213,18 @@ impl<T> ChkBox<T>
 				"[ ]"
 			}
 		};
-		let mut fg = self.fgcol;
-		let mut bg = self.bgcol;
+
+		// 無効の場合薄くする
+		let mut fg = self.fgcol.clone();
+		let mut bg = self.bgcol.clone();
 		if !self.is_active {
-			fg.3 = 100;			
-			bg.3 = 100;			
+			fg.replace_range(6..8, "64");		
+			bg.replace_range(6..8, "64");		
 		}
+
+		// 描画
 		dr_text(&format!("{}{}",check, self.text),
-			self.left, self.top, self.size, fg, bg);
+			self.left, self.top, self.size, &fg, &bg);
 	}
 
 }

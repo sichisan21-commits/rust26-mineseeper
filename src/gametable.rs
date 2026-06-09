@@ -308,79 +308,6 @@ impl GameTable {
     }
 
     //------------------------------
-    // 旗が立てられる可能性のあるマスの強調表示
-    //------------------------------
-    pub fn set_bold(&mut self, is_panel_bold: bool, is_dang_on: bool, is_safe_on: bool) {
-        for index in 0..self.width * self.height {
-            // パネルは開いていて、周囲の爆弾数が１以上なら強調判定
-            if self.table[index as usize].is_open() &&
-               self.table[index as usize].get_around_num() > 0 {
-                self.update_bold(is_panel_bold, is_dang_on, is_safe_on, index);
-            }
-        }
-    }
-
-    //------------------------------
-    // 指定マスの周囲９マスをチェックし、旗が立てられそうなら強調表示する
-    //------------------------------
-    fn update_bold(&mut self, is_panel_bold: bool, _is_dang_on: bool, is_safe_on: bool, cursol_index:i32) {
-        // カーソルの周囲９マスをチェックする
-        let around = self.table[cursol_index as usize].get_around_tbl();      
-
-        // 閉じているマスと旗の立てられているマスをカウントする
-        let mut close_cnt = 0;
-        let mut close_list:Vec<i32> = Vec::new();
-        let mut flag_cnt = 0;
-        let mut miss_cnt = 0;
-        for index in around.into_iter().flatten() {
-            // 範囲外のマス、開封済みのマスはスキップ
-            if index == -1 ||
-                self.table[index as usize].is_open() {
-                continue;
-            }
-
-            // 未開封のマスをカウントする
-            close_cnt += 1;
-
-            if self.table[index as usize].get_userflg() == UserFlg::None {
-                // 旗が立てられていない場合、未開封位置を保持する
-                close_list.push(index);
-            } else {
-                // 旗が立てられている場合カウントする
-                if !self.table[index as usize].is_bom() {
-                    // 間違った旗の数をカウント
-                    miss_cnt += 1;
-                } else {
-                    // 正しい旗の数をカウント
-                    flag_cnt += 1;                            
-                } 
-            }
-        }
-
-        // 周囲の爆弾数を取得
-        let around_num = self.table[cursol_index as usize].get_around_num();
-
-        // 強調表示有効で
-        // 周囲の爆弾の数と未開封のマスの数が一致していて
-        // 旗の数が一致していない場合強調表示
-        if is_panel_bold && close_cnt == around_num &&
-           (flag_cnt != around_num || miss_cnt > 0) {
-                self.table[cursol_index as usize].bold_on();
-        }
-
-        // 安全マス表示オン
-        if is_safe_on {
-            // フラグが正しく立てられていて爆弾数と一致している場合
-            // 安全マスとしてフラグを立てる
-            if close_cnt > around_num && flag_cnt == around_num && miss_cnt == 0 {
-                for index in close_list {
-                    self.table[index as usize].set_autoflag(AutoSts::Safety);                
-                }
-            }
-        }
-    }
-
-    //------------------------------
     // 連鎖的に開く
     //------------------------------
     fn openchain(&mut self, cursol_index: i32) {
@@ -597,7 +524,6 @@ impl GameTable {
         }
     }
 
-
     fn find_inference(&mut self) {
         println!("find_inference");
         println!("----------");
@@ -710,4 +636,3 @@ impl GameTable {
             border + 3.0, RED);
     }
 }
-

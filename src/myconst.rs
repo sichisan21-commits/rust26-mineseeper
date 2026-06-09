@@ -23,7 +23,8 @@ pub const FONT_SIZE: f32 = 50.0;                // フォントサイズ
 pub const SUB_FONT_SIZE: f32 = 30.0;            // フォントサイズ
 // 背景色
 pub const LAYOUT_COLOR: Color = Color::from_rgba(220, 220, 220, 255);
-pub const MENU_COLOR: Color = Color::from_rgba(240, 240, 255, 255);
+pub const MENU_COLOR: Color = Color::from_rgba(200, 200, 230, 255);
+pub const START_WAIT: f64 = 0.03;				// ゲーム開始直後の入力待ち
 
 //----------------------------------------
 // パネル情報
