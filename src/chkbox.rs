@@ -4,6 +4,7 @@ use crate::draw::*;
 struct ChkBox<T>{
 	mytype: T,									// チェックボックスのタイプ
 	viewbox: bool,								// [*] の表示有無
+	is_active: bool,							// 有効／無効
 	text: String,								// 表示文字列
 	left: f32,									// 表示左位置
 	top: f32,									// 表示上位置
@@ -43,6 +44,7 @@ impl<T> ChkBoxMng<T>
 			let viewbox = true;
 			self.chkboxs.push(ChkBox {
 				mytype,
+				is_active: true,
 				viewbox,
 				text,
 				left,
@@ -65,6 +67,17 @@ impl<T> ChkBoxMng<T>
 	}
 
 	//------------------------------
+	// チェックボックスの有効無効変更
+	//------------------------------
+	pub fn active(&mut self, mytype: T, flg: bool) {
+		for chkbox in &mut self.chkboxs {
+			if chkbox.get_type() == mytype {
+				chkbox.active(flg);
+			}
+		}
+	}
+
+	//------------------------------
 	// チェックボックスからフラグを取得
 	//------------------------------
 	pub fn get_flg(&self, mytype: T) -> bool {
@@ -82,7 +95,7 @@ impl<T> ChkBoxMng<T>
 	pub fn set_flg(&mut self, mytype: T, flg: bool) {
 		for chkbox in &mut self.chkboxs {
 			if chkbox.get_type() == mytype {
-				chkbox.set_flg(flg);
+				chkbox.set_flg(flg)
 			}
 		}
 	}
@@ -125,14 +138,18 @@ impl<T> ChkBoxMng<T>
 //--------------------------------------------------
 impl<T> ChkBox<T>
     where
-        T: std::fmt::Debug,
         T: Copy + PartialEq,
 	{
 	//--------------------------------------------------
 	// チェックボックスをクリック（座標が一致していれば）
 	//--------------------------------------------------
 	fn click(&mut self, mouse_x:f32, mouse_y: f32) -> bool {
-		let right = self.left + self.size as f32 * self.text.len() as f32 * 0.7;
+		// 無効化されている場合判定しない
+		if !self.is_active {
+			return false
+		}
+
+		let right = self.left + self.size as f32 * self.text.len() as f32 * 0.6;
 		let bottom = self.top + self.size as f32;
 		if mouse_x >= self.left && mouse_x <= right &&
 		   mouse_y >= self.top && mouse_y <= bottom {
@@ -141,6 +158,18 @@ impl<T> ChkBox<T>
 		}
 		false
 	}
+
+	//--------------------------------------------------
+	// 有効無効を設定する
+	//--------------------------------------------------
+	pub fn active(&mut self, flg: bool)  {
+		self.is_active = flg;
+		// 無効化された場合チェックも落とす
+		if !flg {
+			self.flg = false;
+		} 
+	}
+
 
 	//--------------------------------------------------
 	// タイプを返却する
@@ -180,11 +209,17 @@ impl<T> ChkBox<T>
 			} else if self.flg {
 				"[*]"
 			} else {
-				"[-]"
+				"[ ]"
 			}
 		};
+		let mut fg = self.fgcol;
+		let mut bg = self.bgcol;
+		if !self.is_active {
+			fg.3 = 100;			
+			bg.3 = 100;			
+		}
 		dr_text(&format!("{}{}",check, self.text),
-			self.left, self.top, self.size, self.fgcol, self.bgcol);
+			self.left, self.top, self.size, fg, bg);
 	}
 
 }

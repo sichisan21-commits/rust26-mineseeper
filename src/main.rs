@@ -49,10 +49,6 @@ async fn main()
 		if appmode == GameMode::Game {
 			appmode = game_data.playcontrol();
 			game_data.draw();
-			// 状態がタイトルに遷移した場合、タイトルを初期化
-			if appmode == GameMode::Title {
-				title_data.initial();
-			}
 		}
 
 		// 画面更新

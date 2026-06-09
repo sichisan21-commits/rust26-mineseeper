@@ -8,6 +8,9 @@ pub struct PosTable {
     pub y: f32,
 }
 
+//------------------------------
+// 画面サイズを設定する
+//------------------------------
 pub fn set_winsize(width: f32, height: f32) {
     // 必要な画面サイズを求める
     // 最小・最大範囲に補正して画面サイズへ反映
@@ -25,14 +28,4 @@ pub fn get_index(cursol_x:i32, cursol_y:i32, width:i32, height:i32) -> i32 {
         return -1;
        }
     cursol_y * width + cursol_x
-}
-
-//------------------------------
-// 指定時間待つ（秒）
-//------------------------------
-pub async fn wait_sec(sec: f32) {
-    let start = get_time();
-    while get_time() - start < sec as f64 {
-        next_frame().await;
-    }
 }

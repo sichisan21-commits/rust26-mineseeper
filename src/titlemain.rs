@@ -4,8 +4,8 @@ use crate::myconst::*;
 use crate::utils::*;
 use crate::draw::*;
 
-pub struct TitleMain {
-	chkbox: ChkBoxMng<ChkBoxTitle>,          // チェックボックス
+pub struct TitleMain {						// タイトル画面情報
+	chkbox: ChkBoxMng<ChkBoxTitle>,         // チェックボックス
 	mouse_pos: PosTable,                    // マウスカーソル位置
 }
 
@@ -23,12 +23,12 @@ impl TitleMain {								// タイトル画面
         };
 
 		// チェックボックス作成
-		let pos_x = 30.0;
-		let mut pos_y = 30.0;
+		let pos_x = 50.0;
+		let mut pos_y = 70.0;
 		let fgcol: (u8,u8,u8,u8) = (255,255,0,255);
 		let bgcol: (u8,u8,u8,u8) = (0,0,0,255);
-		let fontsize = 60.0;
-		let offs = 60.0;
+		let offs = 40.0;
+		let fontsize = 40.0;
 	
 		pos_y += offs; gm.chkbox.add(
 			ChkBoxTitle::Easy, String::from("EASY"),
@@ -42,29 +42,21 @@ impl TitleMain {								// タイトル画面
 		pos_y += offs; gm.chkbox.add(
 			ChkBoxTitle::Edit, String::from("EDIT"),
 			pos_x, pos_y, fontsize, fgcol, bgcol, false);
+		gm.chkbox.active(ChkBoxTitle::Edit, false);
 
-		// START
-		let mut pos_y = 30.0;
-		let pos_x = 300.0;
+		// START or QUIT
+		let fontsize = 50.0;
+		let offs =50.0;
 		pos_y += offs; gm.chkbox.add(
 			ChkBoxTitle::Start, String::from("[START]"),
 			pos_x, pos_y, fontsize, (0,255,0,255), bgcol, false);
-		gm.chkbox.view_box(ChkBoxTitle::Start, false);
-			// QUIT
 		pos_y += offs; gm.chkbox.add(
 			ChkBoxTitle::Quit, String::from("[QUIT]"),
 			pos_x, pos_y, fontsize, (255,0,0,255), bgcol,false);
+		gm.chkbox.view_box(ChkBoxTitle::Start, false);
 		gm.chkbox.view_box(ChkBoxTitle::Quit, false);
 
 		gm
-	}
-
-	//----------------------------------------
-	// 初期設定
-	//----------------------------------------
-	pub fn initial(&mut self)  {
-		self.chkbox.clear_flg();
-		self.chkbox.set_flg(ChkBoxTitle::Normal, true);
 	}
 
 	//----------------------------------------
@@ -89,6 +81,8 @@ impl TitleMain {								// タイトル画面
 
 		// Start が選択された場合ゲームに遷移
 		if self.chkbox.get_flg(ChkBoxTitle::Start) {
+			// 内部的にフラグを落としておく
+			self.chkbox.set_flg(ChkBoxTitle::Start, false);
 			return GameMode::Game
 		}
 
@@ -143,6 +137,13 @@ impl TitleMain {								// タイトル画面
 	pub fn draw(&self) {
 		// 盤面全体を塗りつぶす
 		clear_window(LAYOUT_COLOR);
+
+		draw_rectangle(0.0, 60.0, 700.0, 20.0, BLUE);
+
+		dr_text("MINE SWEEPER", 20.0, 10.0, 100.0,
+			(0,0,0,255),(255,255,255,255));
+
+		// チェックボックスを描く
 		self.chkbox.draw();
 	}
 }

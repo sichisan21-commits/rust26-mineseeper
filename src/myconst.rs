@@ -13,7 +13,7 @@ pub const MAX_ZOOMX: f32 = 10.0;
 pub const MAX_ZOOMY: f32 = 10.0;
 
 // 位置・サイズ
-pub const WALL_LEFT: f32 = 280.0;               // 左の壁
+pub const WALL_LEFT: f32 = 300.0;               // 左の壁
 pub const WALL_TOP: f32 = 60.0;                 // 上の壁
 pub const WALL_RIGHT: f32 = 20.0;               // 右の壁
 pub const WALL_BOTTOM: f32 = 20.0;              // 下の壁
@@ -23,6 +23,7 @@ pub const FONT_SIZE: f32 = 50.0;                // フォントサイズ
 pub const SUB_FONT_SIZE: f32 = 30.0;            // フォントサイズ
 // 背景色
 pub const LAYOUT_COLOR: Color = Color::from_rgba(220, 220, 220, 255);
+pub const MENU_COLOR: Color = Color::from_rgba(0, 0, 255, 255);
 
 //----------------------------------------
 // パネル情報
@@ -60,6 +61,9 @@ pub enum ChkBoxGame {						// ゲーム用チェックボックス
 	CursolFlg,								// カーソル表示
 	UndoFlg,								// UNDO使用
 	BoldFlg,								// 確実に旗が立てられるマスの強調
+	BoldSafeOn,								// 強調用の安全マス表示
+	BoldDangOn,								// 強調用の危険マス表示
+	Inference,								// 推論
 	DangOn, 	        	        	    // 危険マスの表示
 	SafeOn,    		        	        	// 安全マスの表示
 	DispAll,       		        	        // 前面表示
