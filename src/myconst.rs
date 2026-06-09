@@ -15,7 +15,7 @@ pub const MAX_ZOOMY: f32 = 10.0;
 // 位置・サイズ
 pub const WALL_LEFT: f32 = 280.0;               // 左の壁
 pub const WALL_TOP: f32 = 60.0;                 // 上の壁
-pub const WALL_RIGHT: f32 = 80.0;               // 右の壁
+pub const WALL_RIGHT: f32 = 20.0;               // 右の壁
 pub const WALL_BOTTOM: f32 = 20.0;              // 下の壁
 pub const SCROLL_LEFT: f32 = 150.0;				// スクロールを開始する横位置
 pub const SCROLL_TOP: f32 = 150.0;				// スクロールを開始する立て位置

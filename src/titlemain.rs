@@ -81,10 +81,6 @@ impl TitleMain {                                // タイトル画面
 		if !is_update {
 			return GameMode::Title;
 		}
-		println!("Easy={}", self.chkbox.get_flg(ChkBoxType::Easy));
-
-		println!("Normal={}", self.chkbox.get_flg(ChkBoxType::Normal));
-		println!("Hard={}", self.chkbox.get_flg(ChkBoxType::Hard));
 
 		// Quit が選択された場合終了
 		if self.chkbox.get_flg(ChkBoxType::Quit) {
@@ -133,8 +129,6 @@ impl TitleMain {                                // タイトル画面
 	// タイトル制御
 	//----------------------------------------
 	pub fn get_setting(&self) -> (i32,i32,i32) {
-		println!("Easy={}", self.chkbox.get_flg(ChkBoxType::Easy));
-		println!("Normal={}", self.chkbox.get_flg(ChkBoxType::Normal));
 		if self.chkbox.get_flg(ChkBoxType::Easy) {
 			(9,9,10)
 		} else if self.chkbox.get_flg(ChkBoxType::Normal) {

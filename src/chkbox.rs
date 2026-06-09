@@ -20,7 +20,7 @@ pub struct ChkBoxMng {						// 管理テーブル
 }
 
 //--------------------------------------------------
-// 管理テーブル
+// チェックボックス管理テーブル
 //--------------------------------------------------
 impl ChkBoxMng{
 	//--------------------------------------------------
@@ -38,17 +38,17 @@ impl ChkBoxMng{
 	pub fn add(&mut self,
 		mytype: ChkBoxType, text: String, left: f32, top: f32, size: f32,
 		fgcol: (u8,u8,u8,u8),bgcol: (u8,u8,u8,u8), flg: bool) {
-			let boxon = true;
-			self.chkboxs.push(ChkBox::new(
+			let viewbox = true;
+			self.chkboxs.push(ChkBox {
 				mytype,
-				boxon,
+				viewbox,
 				text,
 				left,
 				top,
 				size,
 				fgcol,
 				bgcol,
-				flg));
+				flg});
 	}
 
 	//------------------------------
@@ -122,24 +122,6 @@ impl ChkBoxMng{
 // 実装
 //--------------------------------------------------
 impl ChkBox {
-	//--------------------------------------------------
-	// 初期化
-	//--------------------------------------------------
-	pub fn new(mytype: ChkBoxType, viewbox: bool, text: String, left: f32, top: f32, size: f32,
-		fgcol: (u8,u8,u8,u8),bgcol: (u8,u8,u8,u8), flg: bool) -> ChkBox {
-		ChkBox {
-			mytype,
-			viewbox,
-			text,
-			left,
-			top,
-			size,
-			fgcol,
-			bgcol,
-			flg,
-		}
-	}
-
 	//--------------------------------------------------
 	// チェックボックスをクリック（座標が一致していれば）
 	//--------------------------------------------------
