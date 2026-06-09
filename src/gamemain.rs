@@ -24,7 +24,6 @@ pub struct GameMain {
 	sttime: f64,							// プレイ開始時刻
 	nowtime: f64,							// 現在時刻
 	screen: Vec2,							// ウインドウサイズ
-	assistlv: i32,							// アシストレベル
 	mouse_pos: PosTable,                    // マウスカーソル位置
 	cursol: MyCursol,                       // カーソル位置
 	tbldt: TableInfo,                       // 盤面情報
@@ -48,7 +47,6 @@ impl GameMain {
 			screen: Vec2 {x: screen_width(), y: screen_height()},
 			mouse_pos: PosTable{ x:0.0, y:0.0},
 			cursol: MyCursol {x: -1, y: -1, index: -1},
-			assistlv: 0,
 			tbldt: TableInfo {
 				width: 0,
 				height: 0,
@@ -62,17 +60,13 @@ impl GameMain {
 
 		// チェックボックスを作成
 		let pos_x = 20.0;
-		let mut pos_y = 130.0;
+		let mut pos_y = 140.0;
 		let fgcol: (u8,u8,u8,u8) = (0,0,0,255);
 		let bgcol: (u8,u8,u8,u8) = (255,255,255,255);
 
 		// カーソル表示
 		pos_y += 30.0; gm.chkbox.add(
 			ChkBoxGame::CursolFlg, String::from("CURSOL FLAME"),
-			pos_x, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
-		// UNDO使用
-		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxGame::UndoFlg, String::from("USE UNDO"),
 			pos_x, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// BOLD使用
 		pos_y += 30.0; gm.chkbox.add(
@@ -102,9 +96,13 @@ impl GameMain {
 		pos_y += 30.0; gm.chkbox.add(
 			ChkBoxGame::DispAll, String::from("All DISPLAY"),
 			pos_x + 30.0, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
+		// UNDO使用
+		pos_y += 30.0; gm.chkbox.add(
+			ChkBoxGame::UndoFlg, String::from("USE UNDO"),
+			pos_x, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		// タイトルへ戻る
 		pos_y += 50.0; gm.chkbox.add(
-			ChkBoxGame::Title, String::from("[RETURN TITLE]"),
+			ChkBoxGame::Title, String::from(" [RETURN TITLE]"),
 			pos_x, pos_y, SUB_FONT_SIZE, fgcol, bgcol, false);
 		gm.chkbox.view_box(ChkBoxGame::Title, false);
 
@@ -221,19 +219,9 @@ impl GameMain {
 		// キーボード入力処理
 		let is_keyupdate = self.keycontrol();
 
-		// ヒントを作成する
-		let bold_flg = self.chkbox.get_flg(ChkBoxGame::BoldFlg);
-		let safe_on = self.chkbox.get_flg(ChkBoxGame::SafeOn);
-		let dang_on = self.chkbox.get_flg(ChkBoxGame::DangOn);
-		if is_update || is_keyupdate {
-			self.tbldt.table.clear_help(self.assistlv);
-			if bold_flg {
-				// 強調表示オン
-				self.tbldt.table.set_bold(bold_flg, dang_on, safe_on);
-			} else if dang_on || safe_on {
-				// 強調表示オフで安全マス表示または危険マス表示
-				self.tbldt.table.auto_flag(dang_on, safe_on);
-			}
+		// アシスト機能
+		if is_update || is_keyupdate{
+			self.assist();
 		}
 
 		// 更新が発生した場合
@@ -257,7 +245,37 @@ impl GameMain {
 	}
 
 	//------------------------------
-	// マウス位置をテーブルへ反映
+	// アシスト機能
+	//------------------------------
+	fn assist(&mut self) {
+
+		let bold_flg = self.chkbox.get_flg(ChkBoxGame::BoldFlg);
+		let inference_flg = self.chkbox.get_flg(ChkBoxGame::Inference);
+
+		// アシストオフならフラグをクリアして終了
+		if !bold_flg && !inference_flg {
+			self.tbldt.table.clear_help(0);
+			return
+		}
+
+		// 危険マス・安全マス表示初期化
+		let mut safe_on = false;
+		let mut dang_on = false;
+		
+	    // 太字処理か推論処理かでフラグを取得
+		if bold_flg {
+			safe_on = self.chkbox.get_flg(ChkBoxGame::BoldSafeOn);
+			dang_on = self.chkbox.get_flg(ChkBoxGame::BoldDangOn);
+			self.tbldt.table.set_bold(bold_flg, dang_on, safe_on);
+		} else {
+			safe_on = self.chkbox.get_flg(ChkBoxGame::SafeOn);
+			dang_on = self.chkbox.get_flg(ChkBoxGame::DangOn);
+			self.tbldt.table.auto_flag(dang_on, safe_on);
+		}
+	}
+
+	//------------------------------
+	// マウス位置を更新
 	//------------------------------
 	fn mouse_move(&mut self) -> bool {
 		let mut is_update = false;
@@ -335,7 +353,7 @@ impl GameMain {
 
 		//--- UNDO 処理 ---//
 		if self.chkbox.get_flg(ChkBoxGame::UndoFlg) {
-			if is_key_pressed(KeyCode::U) {
+			if is_key_pressed(KeyCode::Left) {
 				// UNDO情報の最新＝現在なので、UNDO中でなければ
 				// １回余計に UNDO する
 				if !self.tbldt.table.is_useundo() {
@@ -347,7 +365,7 @@ impl GameMain {
 			}
 
 			// REDO 処理
-			if is_key_pressed(KeyCode::R) {
+			if is_key_pressed(KeyCode::Right) {
 				self.tbldt.table.table_redo();
 				return false;
 			}
@@ -397,16 +415,17 @@ impl GameMain {
 	// 変更があった場合 true、ない場合は false を返す
 	//------------------------------
 	fn click_tbl_left (&mut self) -> bool {
-		let mut is_update = false;
-
 		// マウス左クリックされていないなら何もしない
 		if !is_mouse_button_pressed(MouseButton::Left) {
-			return is_update
+			return false
 		}
+
+		// 更新フラグの初期化
+		let mut is_update = false;
 
 		// チェックボックス判定
 		is_update |= self.chk_box_click();
-
+		
 		// カーソルが盤面外ならなにもしない
 		if self.cursol.index== -1 {
 			return is_update
@@ -451,6 +470,7 @@ impl GameMain {
 			// 今の盤面を保存する
 			self.tbldt.table.undo_push();
 			self.stat = GameStat::Playing;
+			is_update = true;
 		}
 
 		// クリックしたことを盤面に伝える
@@ -523,8 +543,8 @@ impl GameMain {
 		self.draw_table();
 
 		// メニュー表示
-		draw_rectangle(0.0, 0.0, self.screen.x, WALL_TOP - 20.0, MENU_COLOR.with_alpha(0.4));
-		draw_rectangle(0.0, WALL_TOP - 20.0, WALL_LEFT - 30.0, self.screen.y + 20.0, MENU_COLOR.with_alpha(0.4));
+		draw_rectangle(0.0, 0.0, self.screen.x, WALL_TOP - 20.0, MENU_COLOR.with_alpha(0.6));
+		draw_rectangle(0.0, WALL_TOP - 20.0, WALL_LEFT - 30.0, self.screen.y + 20.0, MENU_COLOR.with_alpha(0.6));
 
 		let flag_num = self.tbldt.table.get_num_redflag();
 		let text = format!("SIZE:{}x{}  BOMB:{}  RED FLAG:{}",
@@ -550,7 +570,7 @@ impl GameMain {
 		// 経過時間を表示
 		draw_rectangle(20.0, WALL_TOP,
 			WALL_LEFT - 70.0,FONT_SIZE, BLACK);
-		let (timestr, fg):(String, (u8,u8,u8,u8)) =
+		let ((timestr, msec),fg):((String, String), (u8,u8,u8,u8)) =
 			// 時間が未初期化の場合灰色で表示
 		if self.stat == GameStat::Ready {
 			(get_time_str(0.0,0.0), (128,128,128,255))
@@ -565,6 +585,9 @@ impl GameMain {
 		};
 		dr_text(&timestr,
 			60.0,WALL_TOP + 5.0, FONT_SIZE * 1.2,
+			fg, (0,0,0,255));
+		dr_text(&msec,
+			50.0 + 140.0,WALL_TOP + 23.0, FONT_SIZE * 0.6,
 			fg, (0,0,0,255));
 
 /*
@@ -622,8 +645,8 @@ impl GameMain {
 	}
 }
 
-fn get_time_str(sttime:f64, nowtime: f64) -> String {
-	let sec = (nowtime - sttime) as i32;
-	format!("{:02}:{:02}", sec / 60, sec % 60)
+fn get_time_str(sttime:f64, nowtime: f64) -> (String,String) {
+	let sec = (nowtime - sttime);
+	(format!("{:02}:{:02}", (sec / 60.0) as i32, (sec % 60.0) as i32),format!(".{:03}", (sec.fract() * 1000.0) as i32))
 }
 

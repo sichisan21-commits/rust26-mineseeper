@@ -27,8 +27,8 @@ impl TitleMain {								// タイトル画面
 		let mut pos_y = 70.0;
 		let fgcol: (u8,u8,u8,u8) = (255,255,0,255);
 		let bgcol: (u8,u8,u8,u8) = (0,0,0,255);
-		let offs = 40.0;
-		let fontsize = 40.0;
+		let offs = 60.0;
+		let fontsize = 60.0;
 	
 		pos_y += offs; gm.chkbox.add(
 			ChkBoxTitle::Easy, String::from("EASY"),
@@ -45,8 +45,8 @@ impl TitleMain {								// タイトル画面
 		gm.chkbox.active(ChkBoxTitle::Edit, false);
 
 		// START or QUIT
-		let fontsize = 50.0;
-		let offs =50.0;
+		let fontsize = 70.0;
+		let offs =70.0;
 		pos_y += offs; gm.chkbox.add(
 			ChkBoxTitle::Start, String::from("[START]"),
 			pos_x, pos_y, fontsize, (0,255,0,255), bgcol, false);
