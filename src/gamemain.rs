@@ -495,6 +495,13 @@ impl GameMain {
 					self.chkbox.set_flg(ChkBoxGame::BoldFlg, false);
 				}
 
+				// 推論全表示が選択された場合
+				ChkBoxGame::DispAll => {
+					// 安全マス危険マス全部表示
+					self.chkbox.set_flg(ChkBoxGame::SafeOn, true);
+					self.chkbox.set_flg(ChkBoxGame::DangOn, true);
+				}
+
 				// それ以外は何もしない
 				_ => {}
 			}

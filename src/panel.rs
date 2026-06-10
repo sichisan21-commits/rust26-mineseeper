@@ -205,8 +205,8 @@ impl Panel {
         // デフォルトの描画色を設定
         let mut panelcolor = PANEL_COL_CLOSE;
 
-        // カーソルの周囲であればヘルプ表示色の設定
-        if is_cursol_around {
+        // カーソルの周囲で旗が立てられていなければヘルプ表示色の設定
+        if is_cursol_around && self.userflg == UserFlg::None {
             if self.auto_flg == AutoSts::Danger {
                 panelcolor = PANEL_COL_DANGER;
             } else if self.auto_flg == AutoSts::Safety {
@@ -319,11 +319,11 @@ impl Panel {
 pub fn from_number(n: i32) -> Color {
     match n {
         1 => BLUE,
-        2 => GREEN,
+        2 => Color::from_rgba(0,150,0,255),
         3 => RED,
         4 => DARKBLUE,
         5 => BROWN,
-        6 => WHITE,
+        6 => Color::from_rgba(0,128,128,255),
         7 => BLACK,
         8 => GRAY,
         _ => BLACK, // 0 や範囲外は黒など
