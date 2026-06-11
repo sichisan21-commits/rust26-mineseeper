@@ -14,7 +14,7 @@ pub const MAX_ZOOMY: f32 = 10.0;
 
 // 位置・サイズ
 pub const WALL_LEFT: f32 = 300.0;               // 左の壁
-pub const WALL_TOP: f32 = 60.0;                 // 上の壁
+pub const WALL_TOP: f32 = 80.0;                 // 上の壁
 pub const WALL_RIGHT: f32 = 20.0;               // 右の壁
 pub const WALL_BOTTOM: f32 = 20.0;              // 下の壁
 pub const SCROLL_LEFT: f32 = 150.0;				// スクロールを開始する横位置
@@ -68,6 +68,7 @@ pub enum ChkBoxGame {						// ゲーム用チェックボックス
 	DangOn, 	        	        	    // 危険マスの表示
 	SafeOn,    		        	        	// 安全マスの表示
 	DispAll,       		        	        // 前面表示
+	BelieveFlag,							// ユーザの立てた旗を正しいと仮定する
 	Title,									// タイトルへ戻る
 }
 
@@ -78,7 +79,7 @@ pub enum GameMode {							// ゲームの状態（全体）
 	Quit,									// ゲーム終了
 }
 
-#[derive(PartialEq)]
+#[derive(Debug,Clone,Copy,PartialEq)]
 pub enum GameStat {							// ゲームの状態
 	Ready,									// ゲームスタート（入力待ち）
 	Playing,								// プレイ中

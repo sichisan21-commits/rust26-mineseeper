@@ -289,7 +289,7 @@ impl GameTable {
     pub fn clear_help(&mut self) {
         for index in 0..self.width * self.height {
             self.table[index as usize].bold_off();
-                self.table[index as usize].set_autoflag(AutoSts::None);
+                self.table[index as usize].set_autoflag(AutoSts::None, false);
         }
     }
 

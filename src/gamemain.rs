@@ -24,10 +24,18 @@ struct MyTime {								// ゲーム内の時間制御
 	played: f64,							// プレイ終了時刻
 }
 
+struct MouseTbl {
+	pos: PosTable,
+	lefton: bool,
+	righton: bool,
+	is_left_click: bool,
+	is_right_click: bool,
+}
+
 pub struct GameMain {						// ゲームメイン情報
 	stat: GameStat,							// ゲームの状態
 	screen: Vec2,							// ウインドウサイズ
-	mouse_pos: PosTable,                    // マウスカーソル位置
+	mouse: MouseTbl,	   	 	            // マウスカーソル位置
 	cursol: MyCursol,                       // カーソル位置
 	tm: MyTime,								// 時刻関連
 	tb: TableInfo,                       	// 盤面情報
@@ -46,7 +54,10 @@ impl GameMain {
 			stat: GameStat::Ready,
 			screen: Vec2 {x: screen_width(), y: screen_height()},
 			tm: MyTime {gamewait: 0.0, waitst: 0.0, playst: 0.0, played: 0.0},
-			mouse_pos: PosTable{x:0.0, y:0.0},
+			mouse: MouseTbl{
+				pos: PosTable{x:0.0,y:0.0},
+				lefton: false, is_left_click: false,
+				righton: false, is_right_click: false},
 			cursol: MyCursol {x: -1, y: -1, index: -1},
 			tb: TableInfo {width: 0, height: 0, bom_num: 0,
 				table: GameTable::new(0,0,0),
@@ -89,6 +100,10 @@ impl GameMain {
 		// 危険マス表示
 		pos_y += 30.0; gm.chkbox.add(
 			ChkBoxGame::DispAll, String::from("All DISPLAY"),
+			pos_x + 30.0, pos_y, SUB_FONT_SIZE, &fgcol, &bgcol, false);
+		// ユーザの立てた旗を正しいと仮定する
+		pos_y += 30.0; gm.chkbox.add(
+			ChkBoxGame::BelieveFlag, String::from("BELEVE FLAG"),
 			pos_x + 30.0, pos_y, SUB_FONT_SIZE, &fgcol, &bgcol, false);
 		// UNDO使用
 		pos_y += 30.0; gm.chkbox.add(
@@ -180,6 +195,9 @@ impl GameMain {
 	// 入力制御
 	//------------------------------
 	pub fn playcontrol(&mut self) -> GameMode {
+		// マウスの情報を更新する
+		self.get_mouse();
+
 		// 待ち時間が設定されている場合、時間消化までなにもしない
 		if self.tm.gamewait != 0.0 {
 			if get_time() - self.tm.waitst < self.tm.gamewait {
@@ -190,11 +208,6 @@ impl GameMain {
 
 		// 盤面の更新フラグを初期化
 		let mut is_update = false;
-
-		// ゲームが開始されているならプレイ時間更新
-		if self.stat == GameStat::Playing {
-			self.tm.played = get_time();
-		}
 
 		// マウス移動処理
 		self.mouse_move();
@@ -213,13 +226,18 @@ impl GameMain {
 		// キーボード入力処理
 		let is_keyupdate = self.keycontrol();
 
+		// ゲームが開始されているならプレイ時間更新
+		if self.stat == GameStat::Playing {
+			self.tm.played = get_time();
+		}
+
 		// アシスト機能
-		if is_update || is_keyupdate{
+		if (is_update || is_keyupdate) && self.stat == GameStat::Playing{
 			self.assist();
 		}
 
 		// 更新が発生した場合
-		if is_update {
+		if is_update && self.stat == GameStat::Playing {
 			// 今の盤面を保存する
 			self.tb.table.undo_push();
 
@@ -232,10 +250,50 @@ impl GameMain {
 			// 爆弾が開かれた場合はステータスを変える
 			if self.tb.table.open_bomnum() > 0 {
 				self.stat = GameStat::Failed;
+				self.mouse.lefton = false;
+				self.mouse.is_left_click = false;
 			}
 		}
 
 		GameMode::Game
+	}
+
+	//------------------------------
+	// マウスの状態取得
+	//------------------------------
+	fn get_mouse(&mut self) {
+		// マウス位置の取得
+		let (x,y) = mouse_position();
+		self.mouse.pos.x = x;
+		self.mouse.pos.y = y;
+
+		// 左クリック処理
+		self.mouse.is_left_click = false;
+		if is_mouse_button_pressed(MouseButton::Left) {
+			// 今左クリックが押されたなら、クリックフラグオン
+			if !self.mouse.lefton {
+				self.mouse.is_left_click = true;
+			}
+			self.mouse.lefton = true;
+		} else if is_mouse_button_released(MouseButton::Left) {
+			// 左クリックが離された
+			self.mouse.is_left_click = false;
+			self.mouse.lefton = false;
+		}
+
+		// 右クリック処理
+		self.mouse.is_right_click = false;
+		if is_mouse_button_pressed(MouseButton::Right) {
+			// 今右クリックが押されたなら、クリックフラグオン
+			if !self.mouse.righton {
+				self.mouse.is_right_click = true;
+			}
+			self.mouse.righton = true;
+		} else if is_mouse_button_released(MouseButton::Right) {
+			// 右クリックが離された
+			self.mouse.is_right_click = false;
+			self.mouse.righton = false;
+		}
 	}
 
 	//------------------------------
@@ -263,7 +321,8 @@ impl GameMain {
 		} else {
 			let safe_on = self.chkbox.get_flg(ChkBoxGame::SafeOn);
 			let dang_on = self.chkbox.get_flg(ChkBoxGame::DangOn);
-			inftbl.inference(safe_on, dang_on);
+			let believe_flg = self.chkbox.get_flg(ChkBoxGame::BelieveFlag);
+			inftbl.inference(safe_on, dang_on, believe_flg);
 		}
 
 		// 処理結果を現在のテーブルへフィードバック
@@ -280,16 +339,18 @@ impl GameMain {
 		// 画面サイズの取得
 		self.screen.x = screen_width();
 		self.screen.y = screen_height();
-		
+
+/*
 		// マウス位置の取得
 		let (x,y) = mouse_position();
-		self.mouse_pos.x = x;
-		self.mouse_pos.y = y;
-
+		self.mouse.pos.x = x;
+		self.mouse.pos.y = y;
+ */
+	
 		// 盤面にマウス位置を反映
 		let tablepos = Vec2 {
-			x: (self.mouse_pos.x - self.tb.offs.x) * (1.0 / self.tb.zoom.x),
-			y: (self.mouse_pos.y - self.tb.offs.y) * (1.0 / self.tb.zoom.y),
+			x: (self.mouse.pos.x - self.tb.offs.x) * (1.0 / self.tb.zoom.x),
+			y: (self.mouse.pos.y - self.tb.offs.y) * (1.0 / self.tb.zoom.y),
 		};
 		let cursol = self.tb.table.set_mousepos(tablepos);
 
@@ -303,8 +364,8 @@ impl GameMain {
 		let over_size_y = real_height + WALL_TOP + WALL_BOTTOM - self.screen.y;
 
 		// カーソルがある程度進んだらスクロールを開始する
-		let mousepos_x = (self.mouse_pos.x - WALL_LEFT - SCROLL_LEFT).max(0.0);
-		let mousepos_y = (self.mouse_pos.y - WALL_TOP - SCROLL_TOP).max(0.0);
+		let mousepos_x = (self.mouse.pos.x - WALL_LEFT - SCROLL_LEFT).max(0.0);
+		let mousepos_y = (self.mouse.pos.y - WALL_TOP - SCROLL_TOP).max(0.0);
 
 		// カーソルが移動できる幅を求める
 		let mouse_move_x = self.screen.x - SCROLL_LEFT * 2.0 - WALL_LEFT;
@@ -336,8 +397,8 @@ impl GameMain {
 	//------------------------------
    fn set_tablepos(&mut self) {
 		let tablepos = Vec2 {
-			x: (self.mouse_pos.x - self.tb.offs.x) * (1.0 / self.tb.zoom.x),
-			y: (self.mouse_pos.y - self.tb.offs.y) * (1.0 / self.tb.zoom.y),
+			x: (self.mouse.pos.x - self.tb.offs.x) * (1.0 / self.tb.zoom.x),
+			y: (self.mouse.pos.y - self.tb.offs.y) * (1.0 / self.tb.zoom.y),
 		};
 		self.cursol = self.tb.table.set_mousepos(tablepos);
 	}
@@ -395,16 +456,19 @@ impl GameMain {
 	// 変更があった場合 true、ない場合は false を返す
 	//------------------------------
 	fn click_tbl_right (&mut self) -> bool {
+		let mut is_update = false;
 
 		// マウス右クリックされていない、マウスが盤面上ではない、なら何もしない
-		if !is_mouse_button_pressed(MouseButton::Right) ||
+		if !self.mouse.righton ||
 			self.cursol.index == -1 {
 			return false
 		}
 
 		// クリックしたことを盤面に伝える
-		let result = self.tb.table.click_right();
-		result
+		if self.mouse.is_right_click {
+			is_update = self.tb.table.click_right();
+			}
+		is_update
 	}
 
 	//------------------------------
@@ -413,7 +477,7 @@ impl GameMain {
 	//------------------------------
 	fn click_tbl_left (&mut self) -> bool {
 		// マウス左クリックされていないなら何もしない
-		if !is_mouse_button_pressed(MouseButton::Left) {
+		if !self.mouse.lefton {
 			return false
 		}
 
@@ -421,7 +485,9 @@ impl GameMain {
 		let mut is_update = false;
 
 		// チェックボックス判定
-		is_update |= self.chk_box_click();
+		if self.mouse.is_left_click {
+			is_update |= self.chk_box_click();
+		}
 		
 		// カーソルが盤面外ならなにもしない
 		if self.cursol.index== -1 {
@@ -436,7 +502,8 @@ impl GameMain {
 		}
 
 		// ゲームは開始し、クリック待ちなら爆弾を生成する
-		if self.stat == GameStat::Ready {
+		if self.mouse.is_left_click &&
+		   self.stat == GameStat::Ready {
 			// ゲーム開始時刻を保持
 			self.tm.playst = get_time();
 			self.tm.played = self.tm.playst;
@@ -468,10 +535,14 @@ impl GameMain {
 			self.tb.table.undo_push();
 			self.stat = GameStat::Playing;
 			is_update = true;
+			return true
 		}
 
 		// クリックしたことを盤面に伝える
-		is_update |= self.tb.table.click_left();
+		if self.stat == GameStat::Playing {
+			is_update |= self.tb.table.click_left();
+		}
+
 		is_update
 	}
 
@@ -483,7 +554,7 @@ impl GameMain {
 
 		// チェックボックスのクリック処理
 		if let Some((kind, _flg)) =
-			self.chkbox.click(self.mouse_pos.x, self.mouse_pos.y) {
+			self.chkbox.click(self.mouse.pos.x, self.mouse.pos.y) {
 			match kind {
 
 				// 強調フラグが選択された場合
@@ -558,6 +629,9 @@ impl GameMain {
 			self.tb.bom_num, flag_num);
 		dr_text(&text, 0.0, 0.0, FONT_SIZE,
 			&String::from("A0A0FFFF"), &String::from("000000FF"));
+		dr_text("Zoom[UP/Down] Undo[LEFT] REDO[RIGHT]",
+			WALL_LEFT - 30.0, WALL_TOP - 40.0, 30.0,
+			&String::from("000000FF"), &String::from("FFFFFFFF"));
 
 		// ゲームの状態表示
 		let bg = String::from("000000FF");
@@ -588,7 +662,7 @@ impl GameMain {
 				};
 				(get_time_str(self.tm.playst, self.tm.played), fg)
 			};
-		draw_rectangle(20.0, WALL_TOP,
+		draw_rectangle(20.0, WALL_TOP - 40.0,
 			WALL_LEFT - 70.0,FONT_SIZE, BLACK);
 /*
 			draw_rectangle_lines(
@@ -596,10 +670,10 @@ impl GameMain {
 			WALL_LEFT - 70.0,FONT_SIZE,5.0, fg);
  */
 		dr_text(&timestr,
-			60.0,WALL_TOP + 5.0, FONT_SIZE * 1.2,
+			60.0,WALL_TOP - 35.0, FONT_SIZE * 1.2,
 			&fg, &String::from("000000FF"));
 		dr_text(&msec,
-			50.0 + 140.0,WALL_TOP + 23.0, FONT_SIZE * 0.6,
+			50.0 + 140.0,WALL_TOP + 10.0, FONT_SIZE * 0.6,
 			&fg, &String::from("000000FF"));
 
 /*
@@ -609,7 +683,7 @@ impl GameMain {
 		let font_offs = 30.0;
 		pos_y += font_offs;dr_text(&format!("SCREEN:{},{} ZOOM:{},{}",self.screen.x,self.screen.y,self.tb.zoom.x, self.tb.zoom.y),
 			0.0, pos_y,font_size,(255,255,255,255),(0,0,0,255));
-		pos_y += font_offs;dr_text(&format!("MOUSE:{},{}",self.mouse_pos.x,self.mouse_pos.y),
+		pos_y += font_offs;dr_text(&format!("MOUSE:{},{}",self.mouse.pos.x,self.mouse.pos.y),
 			0.0, pos_y,font_size,(255,255,255,255),(0,0,0,255));
 		pos_y += font_offs;dr_text(&format!("CURSOL:{},{}:{}",self.cursol.x,self.cursol.y,self.cursol.index),
 			0.0, pos_y,font_size,(255,255,255,255),(0,0,0,255));
