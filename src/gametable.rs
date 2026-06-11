@@ -11,13 +11,6 @@ pub struct MyCursol {                               // カーソル情報
     pub index: i32,                                 // インデックス
 }
 
-// 推論テーブル
-struct Inference {
-    myindex: i32,
-    index: Vec<i32>,
-    bomnum: i32,
-}
-
 // ゲーム情報
 pub struct GameTable {
     width: i32,                             // 盤面の幅
@@ -28,9 +21,7 @@ pub struct GameTable {
     table: Vec<Panel>,                      // 盤面データ
     table_undo: Vec<Vec<Panel>>,            // 盤面データ（履歴）
     useundo: usize,                         // 使用されるundo番号
-    inference: Vec<Inference>,              // 推論テーブル
 }
-
 
 //--------------------------------------------------
 // 実装
@@ -49,7 +40,6 @@ impl GameTable {
             table: Vec::new(),
             table_undo: Vec::new(),
             useundo: 0,
-            inference: Vec::new(),
         }
     }
 
@@ -296,14 +286,10 @@ impl GameTable {
     //------------------------------
     // 全ての補助フラグをクリアする
     //------------------------------
-    pub fn clear_help(&mut self, helplv:i32) {
+    pub fn clear_help(&mut self) {
         for index in 0..self.width * self.height {
             self.table[index as usize].bold_off();
-            if helplv == 0 {
                 self.table[index as usize].set_autoflag(AutoSts::None);
-            } else {
-                self.table[index as usize].set_autoflag(AutoSts::Unknown);
-            }
         }
     }
 
@@ -337,286 +323,12 @@ impl GameTable {
     }
 
     //------------------------------
-    // 自動的に判別し危険マス／安全マスにフラグを立てる
-    //------------------------------
-    pub fn auto_flag (&mut self, _is_dang_on: bool, is_safe_on: bool) {
-        let mut is_update;
-
-        // 無限ループを考慮して、最大１０回試行する
-        for _ in 0..10 {
-            is_update = false;
-
-            // 危険マスを判定
-            for pos_x in 0..self.width {
-                for pos_y in 0..self.height {
-                    is_update |= self.flag_dangar(pos_x, pos_y);
-                }
-            }
-            // 安全マスを判定
-            for pos_x in 0..self.width {
-                for pos_y in 0..self.height {
-                    is_update |= self.flag_safety(pos_x, pos_y);
-                }
-            }
-
-            // 高度推論を行う
-            for _ in 0..10 {
-                self.inference.clear();
-                self.make_inference();
-                self.find_inference();
-            }
-
-            // フラグの更新がなければループ終了
-            if !is_update {
-                break;
-            }
-        }
-
-        // 安全フラグ非表示の場合、安全マスを消す
-        if !is_safe_on {
-            for index in 0..self.width * self.height {
-                if self.table[index as usize].get_autoflag() == AutoSts::Safety {
-                    self.table[index as usize].set_autoflag(AutoSts::Unknown);
-                }
-            }
-        }
-    }
- 
-    //------------------------------
-    // 自動で旗を立てる（危険フラグ）
-    //------------------------------
-    fn flag_dangar (&mut self, cursol_x: i32, cursol_y:i32) -> bool {
-        let mut is_update = false;
-        let cursol_index = get_index(cursol_x, cursol_y, self.width, self.height);
-
-        // 開いていないマスは対象外
-        if !self.table[cursol_index as usize].is_open() {
-            return is_update;
-        }
-
-        // 周囲マスのインデックスを取得
-        let around = self.table[cursol_index as usize].get_around_tbl();
-
-        // 周囲の開いていないパネルを数える
-        let mut close_list:Vec<i32> = Vec::new();
-        for index in around.into_iter().flatten() {
-            // 有効範囲外はまたは開いているパネルはスキップ
-            if index == -1 || self.table[index as usize].is_open() {
-                continue;
-            }
-
-            // 周囲の閉じているパネルのインデックスを保持
-            // 安全フラグのパネルは除外
-            if self.table[index as usize].get_autoflag() != AutoSts::Safety {
-                close_list.push(index);
-            }
-        }
-
-        // 周囲の開いてないパネル数が一致しなければ終了
-        if self.table[cursol_index as usize].get_around_num() != close_list.len() as i32 {
-            return is_update;
-        }
-
-        // 周囲の未開封マスが全て爆弾と判断できた
-        for index in close_list {
-            if  self.table[index as usize].get_autoflag() != AutoSts::Danger {
-                self.table[index as usize].set_autoflag(AutoSts::Danger);
-                is_update = true;
-            }
-        }
-        is_update
-    }
-
-    //------------------------------
-    // 自動で旗を立てる（安全フラグ）
-    //------------------------------
-    fn flag_safety (&mut self, cursol_x: i32, cursol_y:i32) -> bool {
-        let mut is_update = false;
-        let cursol_index = get_index(cursol_x, cursol_y, self.width, self.height);
-
-        // 周囲に爆弾なしあるいは未開封パネルの場合はないもしない
-        if self.table[cursol_index as usize].get_around_num() == 0 ||
-           !self.table[cursol_index as usize].is_open() {
-            return is_update
-        }
-
-        // 周囲マスのインデックスを取得
-        let around = self.table[cursol_index as usize].get_around_tbl();
-
-        // 周囲の開いていないパネルと危険マスを数える
-        let mut close_list:Vec<i32> = Vec::new();
-        let mut bomnum = 0;
-        for index in around.into_iter().flatten() {
-            // 盤面外ならスキップ
-            if index == -1 {
-                continue;
-            }
-
-            // 危険フラグが立っている場合爆弾数としてカウント
-            if self.table[index as usize].get_autoflag() == AutoSts::Danger {
-                bomnum += 1;
-            } else if !self.table[index as usize].is_open() &&
-                      self.table[index as usize].get_autoflag() != AutoSts::Safety {
-                // 周囲の閉じているパネルのインデックスを保持
-                close_list.push(index);
-            }
-        }
-
-        // 危険フラグの数が周囲の爆弾数と一致していなければ抜ける
-        if self.table[cursol_index as usize].get_around_num() != bomnum  {
-            return is_update
-        }
-
-        // 爆弾数と危険フラグ数が一致しているなら
-        // 残りの未開封パネルに安全フラグを立てる
-        for index in close_list {
-            if self.table[index as usize].get_autoflag() != AutoSts::Safety {
-                self.table[index as usize].set_autoflag(AutoSts::Safety);
-                is_update = true;
-            }
-        }
-        is_update
-    }
-
-    fn make_inference(&mut self) {
-        for index in 0..self.width * self.height {
-                self.create_inference(index);
-        }
-    }
-
-    fn create_inference(&mut self, cursol_index: i32) {
-        // 閉じているマスは何もしない
-        if !self.table[cursol_index as usize].is_open() {
-            return
-        }
-
-        // 対象マスの周囲９マスを取得する
-        let around = self.table[cursol_index as usize].get_around_tbl();
-
-        // 周囲の閉じているマス（安全でも危険でもないマス）をカウントする
-        let mut close_list:Vec<i32> = Vec::new();
-        let mut dang_cnt = 0;
-        for index in around.into_iter().flatten() {
-            // 範囲外および開いているマスはスキップ
-            if index == -1 || self.table[index as usize].is_open() {
-                continue;
-            }
-            // パネルの自動フラグを取得
-            let auto_flag = self.table[index as usize].get_autoflag();
-            if auto_flag == AutoSts::Danger {
-                // 危険パネルのカウント
-                dang_cnt += 1;
-            } else if auto_flag == AutoSts::None || auto_flag == AutoSts::Unknown {
-                // 未開封パネルの保持
-                close_list.push(index);
-            }
-        }
-        // 見つかっていない爆弾数を求める
-        let bomnum = self.table[cursol_index as usize].get_around_num() - dang_cnt;
-        if bomnum > 0 {
-            self.inference.push(
-                Inference {
-                    myindex: cursol_index,
-                    index: close_list,
-                    bomnum: bomnum,
-                }
-            )
-        }
-    }
-
-    fn find_inference(&mut self) {
-        println!("find_inference");
-        println!("----------");
-        for index in 0..self.width * self.height {
-            self.match_inference(index);
-        }
-    }
-
-    fn match_inference(&mut self, cursol_index: i32) {
-        // 閉じているマスは何もしない
-        if !self.table[cursol_index as usize].is_open() {
-            return
-        }
-
-        // 周囲９マスの中から、未確定のマスだけリスト化する
-        let around = self.table[cursol_index as usize].get_around_tbl();
-        let mut around_num = self.table[cursol_index as usize].get_around_num();
-        let mut myclose_index:Vec<i32> = Vec::new();
-        for index in around.into_iter().flatten() {
-            // 開いているマスはスキップ
-            if index == -1 || self.table[index as usize].is_open() {
-                continue
-            }
-
-            // テーブル内の自動判定フラグを確認
-            match self.table[index as usize].get_autoflag() {
-                // 確定している危険マスがあるなら爆弾数から差し引く
-                AutoSts::Danger => {
-                    around_num -= 1;
-                }
-                // 周囲の未確定のマスは保存する
-                AutoSts::None | AutoSts::Unknown => {
-                    myclose_index.push(index);
-                }
-                _ => {}
-            }
-        }
-
-        // 周りに未確定のマスがない、またはすべての爆弾は確定している
-        if myclose_index.is_empty() || around_num == 0{
-            return;
-        }
-
-        // 推論テーブルでループする
-        for inference in &self.inference {
-            // 自分自身とは比較しない
-            if inference.myindex == cursol_index {
-                continue;
-            }
-
-            // 何度も検証するためテーブルはコピーしておく
-//            let mut myclose_clone = myclose_index.clone();
-//            let mut is_exists = true;
-
-            // 推論テーブルのマスが現在の周囲９マスに含まれるか
-            // 含まれなければスキップ
-            if !inference.index.iter().all(|idx| myclose_index.contains(idx)) {
-                continue;
-            }
-
-            // myclose_index から inference.index を除いた残りを作る
-            let remain: Vec<i32> = myclose_index
-                .iter()
-                .cloned()
-                .filter(|idx| !inference.index.contains(idx))
-                .collect();
-
-            // 判定中に -1 した要素を削除
-//            myclose_clone.retain(|&x| x != -1);
-
-            // 残爆弾数が一致した場合、重複していないマスは安全
-            if around_num == inference.bomnum {
-                for index in remain  {
-                    self.table[index as usize].set_autoflag(AutoSts::Safety);
-                }
-            } else if around_num - inference.bomnum == remain.len() as i32 {
-            // 残ったマスの数と差し引き爆弾数が同じ場合は危険
-                for index in remain {
-                    self.table[index as usize].set_autoflag(AutoSts::Danger);
-                }
-            }
-            break;
-        }
-    }
-
-    //------------------------------
     // 盤面を描画する
     //------------------------------
-    pub fn draw_panel(&self, is_allhint: bool) {
+    pub fn draw_panel(&self, is_allhint: bool, is_dangon: bool, is_safeon: bool) {
         // 盤面を表示
         for panel in &self.table {
-            panel.draw_panel(self.cursol.x, self.cursol.y, is_allhint);
-
+            panel.draw_panel(self.cursol.x, self.cursol.y, is_allhint, is_dangon, is_safeon);
         }
     }
 

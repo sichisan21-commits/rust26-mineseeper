@@ -167,7 +167,7 @@ impl Panel {
     //------------------------------
     // 自分自身を描画
     //------------------------------
-    pub fn draw_panel(&self, cursol_x: i32, cursol_y: i32, is_alldraw: bool) {
+    pub fn draw_panel(&self, cursol_x: i32, cursol_y: i32, is_alldraw: bool, is_dangon:bool, is_safeon:bool) {
         let mut is_cursol_around = true;
 
         // カーソル周囲９マスか判定
@@ -189,14 +189,14 @@ impl Panel {
             WHITE);
 
         // パネルを描く
-        self.draw_panel_close(left, top, is_cursol_around);
+        self.draw_panel_close(left, top, is_cursol_around, is_dangon, is_safeon);
         self.draw_panel_open(left, top, is_cursol_around);
     }
 
     //------------------------------
     // 閉じているパネルの描画
     //------------------------------
-    fn draw_panel_close(&self, left:f32, top: f32, is_cursol_around: bool){
+    fn draw_panel_close(&self, left:f32, top: f32, is_cursol_around: bool, is_dangon: bool, is_safeon: bool){
         // 開いているなら何もしない
         if self.is_open {
             return
@@ -207,9 +207,9 @@ impl Panel {
 
         // カーソルの周囲で旗が立てられていなければヘルプ表示色の設定
         if is_cursol_around && self.userflg == UserFlg::None {
-            if self.auto_flg == AutoSts::Danger {
+            if is_dangon && self.auto_flg == AutoSts::Danger {
                 panelcolor = PANEL_COL_DANGER;
-            } else if self.auto_flg == AutoSts::Safety {
+            } else if is_safeon && self.auto_flg == AutoSts::Safety {
                 panelcolor = PANEL_COL_SAFETY;
             }
         }
@@ -303,13 +303,15 @@ impl Panel {
             draw_text("F", left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, BLACK);
             draw_text("F", left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, flag_col);
             draw_text("F", left + PANEL_FONT_OFFSX - 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, flag_col);
+/*
         } else {
             // 判明していないパネルなら？を表示
             if self.auto_flg == AutoSts::Unknown && is_cursol_around {
                 draw_text("?", left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, GRAY);
                 draw_text("?", left + PANEL_FONT_OFFSX, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, GRAY);
             }
-        }
+*/
+            }
     }
 }
 

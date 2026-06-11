@@ -248,24 +248,27 @@ impl GameMain {
 
 		// アシストオフならフラグをクリアして終了
 		if !bold_flg && !inference_flg {
-			self.tb.table.clear_help(0);
+			self.tb.table.clear_help();
 			return
 		}
+
+		// 推論ロジックへテーブルのコピーを渡す
+		let edit_table = self.tb.table.tbl_backup();
+		let mut inftbl = InfTable::new(edit_table,self.tb.width, self.tb.height);
 
 	    // 太字処理か推論処理かでフラグ処理
 		if bold_flg {
 			let safe_on = self.chkbox.get_flg(ChkBoxGame::BoldSafeOn);
-			// 強調判定を実施
-			let edit_table = self.tb.table.tbl_backup();
-			let mut inftbl = InfTable::new(edit_table,self.tb.width, self.tb.height);
 			inftbl.set_bold(safe_on);
-			let edit_table = inftbl.get_table();
-			self.tb.table.tbl_restore(edit_table);
 		} else {
 			let safe_on = self.chkbox.get_flg(ChkBoxGame::SafeOn);
 			let dang_on = self.chkbox.get_flg(ChkBoxGame::DangOn);
-			self.tb.table.auto_flag(dang_on, safe_on);
+			inftbl.inference(safe_on, dang_on);
 		}
+
+		// 処理結果を現在のテーブルへフィードバック
+		let edit_table = inftbl.get_table();
+		self.tb.table.tbl_restore(edit_table);
 	}
 
 	//------------------------------
@@ -493,6 +496,8 @@ impl GameMain {
 				ChkBoxGame::Inference => {
 					// 強調フラグをオフにする
 					self.chkbox.set_flg(ChkBoxGame::BoldFlg, false);
+					// 危険マス表示オン
+					self.chkbox.set_flg(ChkBoxGame::DangOn, true);
 				}
 
 				// 推論全表示が選択された場合
@@ -640,7 +645,10 @@ impl GameMain {
 			self.tb.height as f32 * PANEL_HEIGHT + offs * 2.0, BLUE);
 
 		// 盤面の描画
-		self.tb.table.draw_panel(self.chkbox.get_flg(ChkBoxGame::DispAll));
+		let is_dangon= self.chkbox.get_flg(ChkBoxGame::DangOn);
+		let mut is_safeon = self.chkbox.get_flg(ChkBoxGame::SafeOn);
+		is_safeon |= self.chkbox.get_flg(ChkBoxGame::BoldSafeOn);
+		self.tb.table.draw_panel(self.chkbox.get_flg(ChkBoxGame::DispAll), is_dangon, is_safeon);
 
 		// カーソル周りに枠を表示
 		if self.chkbox.get_flg(ChkBoxGame::CursolFlg) {

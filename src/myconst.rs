@@ -98,5 +98,4 @@ pub enum AutoSts {                          // 自動判定フラグ
 	None,                                   // なにもなし
 	Safety,                                 // 安全マス
 	Danger,                                 // 危険マス
-	Unknown,                                // 不明
 }
