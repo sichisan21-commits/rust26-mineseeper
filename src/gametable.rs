@@ -271,7 +271,7 @@ impl GameTable {
     // →クリック処理
     // 変更があった場合 true、ない場合は false を返す
     //------------------------------
-    pub fn click_right(&mut self) -> bool {
+    pub fn click_right(&mut self, use_blueflg: bool) -> bool {
         // 座標をインデックスに変換
         // クリック位置が盤面外、あるいはすでに開かれているなら何もしない
         if self.cursol.index == -1 || self.table[self.cursol.index as usize].is_open() {
@@ -279,7 +279,7 @@ impl GameTable {
         }
 
         // 旗の操作
-        self.table[self.cursol.index as usize].userflg();
+        self.table[self.cursol.index as usize].userflg(use_blueflg);
         true
     }
 

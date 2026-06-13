@@ -22,9 +22,12 @@ async fn main()
 	{
 	rand::srand(miniquad::date::now() as u64);
 
+	// フォントを読み込む
+	let myfont = load_ttf_font("assets/msgothic.ttc").await.unwrap();
+
 	// タイトル画面とゲームメインを初期化する
-	let mut title_data = TitleMain::new();
-	let mut game_data = GameMain::new();
+	let mut title_data = TitleMain::new(&myfont);
+	let mut game_data = GameMain::new(&myfont);
 
 	// タイトル画面から始める
 	let mut appmode = GameMode::Title;

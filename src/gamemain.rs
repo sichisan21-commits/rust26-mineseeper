@@ -32,24 +32,27 @@ struct MouseTbl {
 	is_right_click: bool,
 }
 
-pub struct GameMain {						// ゲームメイン情報
+pub struct GameMain<'a> {					// ゲームメイン情報
 	stat: GameStat,							// ゲームの状態
 	screen: Vec2,							// ウインドウサイズ
 	mouse: MouseTbl,	   	 	            // マウスカーソル位置
 	cursol: MyCursol,                       // カーソル位置
 	tm: MyTime,								// 時刻関連
 	tb: TableInfo,                       	// 盤面情報
-	chkbox: ChkBoxMng<ChkBoxGame>,			// 自作チェックボックス
+	chkbox: ChkBoxMng<'a,ChkBoxGame>,		// 自作チェックボックス
+	myfont: &'a Font,						// フォント情報
 }
 
 //--------------------------------------------------
 // 実装
 //--------------------------------------------------
-impl GameMain {
+impl<'a> GameMain<'a> {
 	//------------------------------
 	// 初期化
 	//------------------------------
-	pub fn new () -> GameMain {
+	pub fn new (myfont: &'a Font) -> GameMain<'a> {
+
+		// 生成
 		let mut gm = GameMain {
 			stat: GameStat::Ready,
 			screen: Vec2 {x: screen_width(), y: screen_height()},
@@ -64,63 +67,49 @@ impl GameMain {
 				offs: Vec2 { x: WALL_LEFT, y: WALL_TOP },
 				zoom: Vec2 { x: MAX_ZOOMX, y: MAX_ZOOMY},
 			},
-			chkbox: ChkBoxMng::new(),
+			chkbox: ChkBoxMng::new(myfont),
+			myfont,
 		};
 
-		// チェックボックスを作成
-		let pos_x = 20.0;
-		let mut pos_y = 140.0;
-		let fgcol = String::from("000000FF");
-		let bgcol = String::from("FFFFFFFF");
+		// チェックボックス作成
+        gm.chkbox.set_base(20.0,180.0,200.0, 30.0, 25.0,"000000FF", "FFFFFFFF");
+		gm.chkbox.add(ChkBoxGame::CursolFlg, String::from("CURSOL FLAME"), false);
+		gm.chkbox.add(ChkBoxGame::DragOpen, String::from("DRAG OPEN"), false);
+		gm.chkbox.add(ChkBoxGame::UseBlueFlg, String::from("USE BLUEFLAG"), false);
+		gm.chkbox.add(ChkBoxGame::BoldFlg, String::from("USE BOLD"), false);
+		gm.chkbox.set_offs(ChkBoxGame::BoldFlg, 0.0, 60.0);
+		gm.chkbox.add(ChkBoxGame::Inference, String::from("USE INFERENCE"), false);
+		gm.chkbox.add(ChkBoxGame::UndoFlg, String::from("USE UNDO"), false);
+		gm.chkbox.add(ChkBoxGame::Title, String::from(" [RETURN TITLE]"), false);
+		gm.chkbox.set_col(ChkBoxGame::Title, "007777FF","");
+		gm.chkbox.set_offs(ChkBoxGame::Title, 0.0, 10.0);
 		
-		// カーソル表示
-		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxGame::CursolFlg, String::from("CURSOL FLAME"),
-			pos_x, pos_y, SUB_FONT_SIZE, &fgcol, &bgcol, false);
-		// BOLD使用
-		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxGame::BoldFlg, String::from("USE BOLD"),
-			pos_x, pos_y, SUB_FONT_SIZE, &fgcol, &bgcol, false);
-		// 安全マス表示（BOLD用）
-		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxGame::BoldSafeOn, String::from("SAFETY ON"),
-			pos_x + 30.0, pos_y, SUB_FONT_SIZE, &fgcol, &bgcol, false);
-		// 推論使用
-		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxGame::Inference, String::from("USE INFERENCE"),
-			pos_x, pos_y, SUB_FONT_SIZE, &fgcol, &bgcol, false);
-		// 安全マス表示
-		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxGame::SafeOn, String::from("SAFETY ON"),
-			pos_x + 30.0, pos_y, SUB_FONT_SIZE, &fgcol, &bgcol, false);
-		// 危険マス表示
-		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxGame::DangOn, String::from("DANGER ON"),
-			pos_x + 30.0, pos_y, SUB_FONT_SIZE, &fgcol, &bgcol, false);
-		// 危険マス表示
-		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxGame::DispAll, String::from("All DISPLAY"),
-			pos_x + 30.0, pos_y, SUB_FONT_SIZE, &fgcol, &bgcol, false);
-		// ユーザの立てた旗を正しいと仮定する
-		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxGame::BelieveFlag, String::from("BELEVE FLAG"),
-			pos_x + 30.0, pos_y, SUB_FONT_SIZE, &fgcol, &bgcol, false);
-		// UNDO使用
-		pos_y += 30.0; gm.chkbox.add(
-			ChkBoxGame::UndoFlg, String::from("USE UNDO"),
-			pos_x, pos_y, SUB_FONT_SIZE, &fgcol, &bgcol, false);
-		// タイトルへ戻る
-		pos_y += 50.0; gm.chkbox.add(
-			ChkBoxGame::Title, String::from(" [RETURN TITLE]"),
-			pos_x, pos_y, SUB_FONT_SIZE, &fgcol, &bgcol, false);
+		// 子のチェックボックス作成
+        gm.chkbox.set_base(20.0,180.0,200.0, 25.0, 20.0,"000000FF", "FFFFFFFF");
+		gm.chkbox.addsub(ChkBoxGame::BoldSafeOn, ChkBoxGame::BoldFlg,String::from("SAFETY ON"), false);
+		gm.chkbox.addsub(ChkBoxGame::SafeOn,ChkBoxGame::Inference, String::from("SAFETY ON"), false);
+		gm.chkbox.addsub(ChkBoxGame::DangOn,ChkBoxGame::Inference, String::from("DANGER ON"), true);
+		gm.chkbox.addsub(ChkBoxGame::DispAll,ChkBoxGame::Inference, String::from("All DISPLAY"), false);
+		gm.chkbox.addsub(ChkBoxGame::BelieveFlag,ChkBoxGame::Inference, String::from("BELEVE FLAG"), false);
+
+		gm.chkbox.view_hitbox(false);
+
+		// タイトルへ戻るはボックス部分を非表示
 		gm.chkbox.view_box(ChkBoxGame::Title, false);
 
-		// 一部のチェックボックスを無効化
-		gm.chkbox.active(ChkBoxGame::BoldSafeOn,false);
-		gm.chkbox.active(ChkBoxGame::BoldDangOn,false);
-		gm.chkbox.active(ChkBoxGame::SafeOn,false);
-		gm.chkbox.active(ChkBoxGame::DangOn,false);
-		gm.chkbox.active(ChkBoxGame::DispAll,false);
+		// 説明文追加
+		gm.chkbox.set_help(ChkBoxGame::CursolFlg,"[CURSOL FLAME]\n９×９のカーソルを表示します。");
+		gm.chkbox.set_help(ChkBoxGame::DragOpen,"[DRAG OPEN]\n押しっぱなしでまとめてパネルを開きます。");
+		gm.chkbox.set_help(ChkBoxGame::UseBlueFlg,"[USE BLUEFLAG]\n「青色の旗」を使用します、赤色の旗と区別したい場合に使用してください。");
+		gm.chkbox.set_help(ChkBoxGame::BoldFlg,"[USE BOLD]※初心者にお勧め\n「数字」と「周りの未開封パネル数」が一致していると強調表示されます。\n（正しく旗を立てると強調表示は消えます）");
+		gm.chkbox.set_help(ChkBoxGame::BoldSafeOn,"[SAFETY ON]\n旗の周囲の安全パネルを表示します。");
+		gm.chkbox.set_help(ChkBoxGame::Inference,"[USE INFERENCE]\n見えている数字から、危険／安全パネルを推論します。");
+		gm.chkbox.set_help(ChkBoxGame::DangOn,"[DANGER ON]\n推論で危険パネルを表示します。");
+		gm.chkbox.set_help(ChkBoxGame::SafeOn,"[SAFETY ON]\n推論で安全パネルを表示します。");
+		gm.chkbox.set_help(ChkBoxGame::DispAll,"[ALL DISPLAY]\n全体に危険／安全パネルを表示します。");
+		gm.chkbox.set_help(ChkBoxGame::BelieveFlag,"[BELIEVE FLAG]\nあなたの立てた旗を信じて推論します。");
+		gm.chkbox.set_help(ChkBoxGame::UndoFlg,"[USE UNDO]\nUNDO（やり直し）を有効にします。");
+		gm.chkbox.set_help(ChkBoxGame::Title,"[RETURN TITLE]\nタイトルに戻ります。");
 
 		gm
 	}
@@ -245,6 +234,8 @@ impl GameMain {
 			let close_num = self.tb.width * self.tb.height - self.tb.bom_num - self.tb.table.get_opennum() as i32;
 			if close_num == 0 {
 				self.stat = GameStat::Success;
+				self.mouse.lefton = false;
+				self.mouse.is_left_click = false;
 			}
 
 			// 爆弾が開かれた場合はステータスを変える
@@ -339,13 +330,6 @@ impl GameMain {
 		// 画面サイズの取得
 		self.screen.x = screen_width();
 		self.screen.y = screen_height();
-
-/*
-		// マウス位置の取得
-		let (x,y) = mouse_position();
-		self.mouse.pos.x = x;
-		self.mouse.pos.y = y;
- */
 	
 		// 盤面にマウス位置を反映
 		let tablepos = Vec2 {
@@ -353,6 +337,11 @@ impl GameMain {
 			y: (self.mouse.pos.y - self.tb.offs.y) * (1.0 / self.tb.zoom.y),
 		};
 		let cursol = self.tb.table.set_mousepos(tablepos);
+
+		// 押しっぱなしの場合はスクロールしない
+		if self.mouse.lefton {
+			return is_update;
+		}
 
 		// スクロール制御
 		// 盤面のリアルサイズを求める
@@ -466,7 +455,7 @@ impl GameMain {
 
 		// クリックしたことを盤面に伝える
 		if self.mouse.is_right_click {
-			is_update = self.tb.table.click_right();
+			is_update = self.tb.table.click_right(self.chkbox.get_flg(ChkBoxGame::UseBlueFlg));
 			}
 		is_update
 	}
@@ -534,13 +523,16 @@ impl GameMain {
 			// 今の盤面を保存する
 			self.tb.table.undo_push();
 			self.stat = GameStat::Playing;
-			is_update = true;
 			return true
 		}
 
 		// クリックしたことを盤面に伝える
 		if self.stat == GameStat::Playing {
-			is_update |= self.tb.table.click_left();
+			// 左クリック単発押し、または DRAG OPEN がオンなら
+			if self.mouse.is_left_click ||
+			   self.chkbox.get_flg(ChkBoxGame::DragOpen) {
+				is_update |= self.tb.table.click_left();
+			   }
 		}
 
 		is_update
@@ -553,55 +545,35 @@ impl GameMain {
 		let mut is_update = false;
 
 		// チェックボックスのクリック処理
-		if let Some((kind, _flg)) =
+		if let Some((kind, flg)) =
 			self.chkbox.click(self.mouse.pos.x, self.mouse.pos.y) {
 			match kind {
 
 				// 強調フラグが選択された場合
 				ChkBoxGame::BoldFlg => {
 					// 推論フラグをオフにする
+					self.chkbox.set_flg(ChkBoxGame::CursolFlg, true);
 					self.chkbox.set_flg(ChkBoxGame::Inference, false);
 				}
 
 				// 推論フラグが選択された場合
 				ChkBoxGame::Inference => {
 					// 強調フラグをオフにする
+					self.chkbox.set_flg(ChkBoxGame::CursolFlg, true);
 					self.chkbox.set_flg(ChkBoxGame::BoldFlg, false);
-					// 危険マス表示オン
-					self.chkbox.set_flg(ChkBoxGame::DangOn, true);
 				}
 
 				// 推論全表示が選択された場合
 				ChkBoxGame::DispAll => {
 					// 安全マス危険マス全部表示
-					self.chkbox.set_flg(ChkBoxGame::SafeOn, true);
-					self.chkbox.set_flg(ChkBoxGame::DangOn, true);
+					if flg {
+						self.chkbox.set_flg(ChkBoxGame::SafeOn, true);
+						self.chkbox.set_flg(ChkBoxGame::DangOn, true);
+					}
 				}
 
 				// それ以外は何もしない
 				_ => {}
-			}
-
-			// 強調表示の有効無効を連動させる
-			if self.chkbox.get_flg(ChkBoxGame::BoldFlg) {
-				self.chkbox.active(ChkBoxGame::BoldSafeOn, true);
-				self.chkbox.active(ChkBoxGame::BoldDangOn, true);
-				self.chkbox.set_flg(ChkBoxGame::CursolFlg, true);
-			} else {
-				self.chkbox.active(ChkBoxGame::BoldSafeOn, false);
-				self.chkbox.active(ChkBoxGame::BoldDangOn, false);
-			}
-
-			// 推論表示の有効無効を連動させる
-			if self.chkbox.get_flg(ChkBoxGame::Inference) {
-				self.chkbox.active(ChkBoxGame::SafeOn, true);
-				self.chkbox.active(ChkBoxGame::DangOn, true);
-				self.chkbox.active(ChkBoxGame::DispAll, true);
-				self.chkbox.set_flg(ChkBoxGame::CursolFlg, true);
-			} else {
-				self.chkbox.active(ChkBoxGame::SafeOn, false);
-				self.chkbox.active(ChkBoxGame::DangOn, false);
-				self.chkbox.active(ChkBoxGame::DispAll, false);
 			}
 			is_update = true;
 
@@ -627,11 +599,11 @@ impl GameMain {
 		let text = format!("SIZE:{}x{}  BOMB:{}  RED FLAG:{}",
 			self.tb.width, self.tb.height,
 			self.tb.bom_num, flag_num);
-		dr_text(&text, 0.0, 0.0, FONT_SIZE,
-			&String::from("A0A0FFFF"), &String::from("000000FF"));
-		dr_text("Zoom[UP/Down] Undo[LEFT] REDO[RIGHT]",
-			WALL_LEFT - 30.0, WALL_TOP - 40.0, 30.0,
-			&String::from("000000FF"), &String::from("FFFFFFFF"));
+		dr_text_ex(&text, 0.0, 0.0, FONT_SIZE,
+			"A0A0FFFF", "000000FF", self.myfont);
+		dr_text_ex("ZoomUp[↑] ZoomDown[↓] Undo[←] Redo[→]",
+			WALL_LEFT - 30.0, WALL_TOP - 40.0, 20.0,
+			"000000FF", "FFFFFFFF", self.myfont);
 
 		// ゲームの状態表示
 		let bg = String::from("000000FF");
@@ -643,9 +615,11 @@ impl GameMain {
 			} else {
 				("", String::from("00000000"))
 			};
-		dr_text(text, 20.0, 120.0, FONT_SIZE, &fg, &bg);
+		dr_text(text, 20.0, 120.0, FONT_SIZE_BIG, &fg, &bg);
 
 		// チェックボックスを表示する
+		dr_text_ex("-- ASSIST --", 20.0, 290.0, FONT_SIZE,
+			"A0A0FFFF", "000000FF", self.myfont);
 		self.chkbox.draw();
 	
 		// 経過時間を表示
@@ -663,34 +637,33 @@ impl GameMain {
 				(get_time_str(self.tm.playst, self.tm.played), fg)
 			};
 		draw_rectangle(20.0, WALL_TOP - 40.0,
-			WALL_LEFT - 70.0,FONT_SIZE, BLACK);
+			WALL_LEFT - 70.0,FONT_SIZE_BIG, BLACK);
 /*
 			draw_rectangle_lines(
 			20.0, WALL_TOP,
 			WALL_LEFT - 70.0,FONT_SIZE,5.0, fg);
  */
 		dr_text(&timestr,
-			60.0,WALL_TOP - 35.0, FONT_SIZE * 1.2,
+			60.0,WALL_TOP - 35.0, FONT_SIZE_BIG * 1.2,
 			&fg, &String::from("000000FF"));
 		dr_text(&msec,
-			50.0 + 140.0,WALL_TOP + 10.0, FONT_SIZE * 0.6,
+			50.0 + 140.0,WALL_TOP + 10.0, FONT_SIZE_BIG * 0.6,
 			&fg, &String::from("000000FF"));
-
 /*
 		// デバッグ
 		let mut pos_y = 400.0;
 		let font_size = 30.0;
 		let font_offs = 30.0;
-		pos_y += font_offs;dr_text(&format!("SCREEN:{},{} ZOOM:{},{}",self.screen.x,self.screen.y,self.tb.zoom.x, self.tb.zoom.y),
-			0.0, pos_y,font_size,(255,255,255,255),(0,0,0,255));
-		pos_y += font_offs;dr_text(&format!("MOUSE:{},{}",self.mouse.pos.x,self.mouse.pos.y),
-			0.0, pos_y,font_size,(255,255,255,255),(0,0,0,255));
-		pos_y += font_offs;dr_text(&format!("CURSOL:{},{}:{}",self.cursol.x,self.cursol.y,self.cursol.index),
-			0.0, pos_y,font_size,(255,255,255,255),(0,0,0,255));
-		pos_y += font_offs;dr_text(&format!("TIME:{}",get_time()),
-			0.0, pos_y,font_size,(255,255,255,255),(0,0,0,255));
- */
-
+		pos_y += font_offs;dr_text_ex(&format!("SCREEN:{},{} ZOOM:{},{}",self.screen.x,self.screen.y,self.tb.zoom.x, self.tb.zoom.y),
+			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",self.myfont);
+		pos_y += font_offs;dr_text_ex(&format!("MOUSE:{},{}",self.mouse.pos.x,self.mouse.pos.y),
+			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",self.myfont);
+		pos_y += font_offs;dr_text_ex(&format!("CURSOL:{},{}:{}",self.cursol.x,self.cursol.y,self.cursol.index),
+			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",self.myfont);
+		pos_y += font_offs;dr_text_ex(&format!("TIME:{}",get_time()),
+			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",self.myfont);
+*/
+		self.draw_help();
 	}
 
 	//------------------------------
@@ -731,6 +704,33 @@ impl GameMain {
 
 		// カメラをリセット
 		set_default_camera();
+	}
+
+	//------------------------------
+	// 盤面の描画
+	//------------------------------
+	fn draw_help(&self) {
+		let fontsize = 20.0;
+		let offs = 5.0;
+		if let Some((typ, help_lines)) =
+		   self.chkbox.gethelp(self.mouse.pos.x, self.mouse.pos.y) {
+			// ヘルプが設定されていない場合何もしない
+			if help_lines.len() == 0 {
+				return;
+			}
+			// ヘルプ周囲を塗りつぶす
+			let left = self.mouse.pos.x;
+			let top = self.mouse.pos.y + 25.0;
+			let height = help_lines.len() as f32 * (fontsize + offs);
+			let width = 800.0;
+			draw_rectangle(left - 5.0, top - 5.0,
+				width + 10.0, height + 10.0, BLACK.with_alpha(0.5));
+			// ヘルプテキストを表示する
+			for (i, line) in help_lines.iter().enumerate() {
+				dr_text_ex(line, left, top + i as f32 * (fontsize + offs),
+					fontsize, "00FFFFFF", "000000FF", self.myfont);
+			}
+		}
 	}
 }
 

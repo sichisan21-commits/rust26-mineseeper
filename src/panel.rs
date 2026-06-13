@@ -76,11 +76,17 @@ impl Panel {
 	//------------------------------
 	// 旗のオン／オフ
 	//------------------------------
-	pub fn userflg(&mut self) {
+	pub fn userflg(&mut self, use_blueflg: bool) {
 		// Close → RedFlg → BlueFlg の順に巡回する
 		self.userflg = match self.userflg {
 			UserFlg::None    => UserFlg::RedFlg,
-			UserFlg::RedFlg  => UserFlg::BlueFlg,
+			UserFlg::RedFlg  => {
+				if use_blueflg {
+					UserFlg::BlueFlg
+				} else {
+					UserFlg::None
+				}
+			},
 			UserFlg::BlueFlg => UserFlg::None,
 		};
 	}
@@ -290,7 +296,7 @@ impl Panel {
 	 //------------------------------
 	// パネルの文字を描画（閉じている）
 	//------------------------------
-	fn draw_text_close(&self, left: f32, top:f32, is_cursol_around: bool) {
+	fn draw_text_close(&self, left: f32, top:f32, _is_cursol_around: bool) {
 		// 開いていればなにもしない
 		if self.is_open {
 			return

@@ -4,57 +4,47 @@ use crate::myconst::*;
 use crate::utils::*;
 use crate::draw::*;
 
-pub struct TitleMain {						// タイトル画面情報
-	chkbox: ChkBoxMng<ChkBoxTitle>,         // チェックボックス
+pub struct TitleMain <'a> {					// タイトル画面情報
+	chkbox: ChkBoxMng<'a,ChkBoxTitle>,      // チェックボックス
 	mouse_pos: PosTable,                    // マウスカーソル位置
+	myfont: &'a Font,						// フォント情報
 }
 
 //--------------------------------------------------
 // 実装
 //--------------------------------------------------
-impl TitleMain {								// タイトル画面
+impl<'a> TitleMain<'a> {								// タイトル画面
 	//----------------------------------------
 	// 初期化
 	//----------------------------------------
-    pub fn new() -> TitleMain {
+    pub fn new(myfont: &'a Font) -> TitleMain<'a> {
         let mut gm = TitleMain {
-            chkbox: ChkBoxMng::new(),
-            mouse_pos: PosTable { x: 0.0, y: 0.0 },
-        };
+			chkbox: ChkBoxMng::new(myfont),
+			mouse_pos: PosTable { x: 0.0, y: 0.0 },
+			myfont,
+		};
 
 		// チェックボックス作成
-		let pos_x = 50.0;
-		let mut pos_y = 70.0;
-		let fgcol = String::from("FFFF00FF");
-		let bgcol = String::from("0000A0A0");
-		let offs = 60.0;
-		let fontsize = 60.0;
-	
-		pos_y += offs; gm.chkbox.add(
-			ChkBoxTitle::Easy, String::from("EASY"),
-			pos_x, pos_y, fontsize, &fgcol, &bgcol, false);
-		pos_y += offs; gm.chkbox.add(
-			ChkBoxTitle::Normal, String::from("NORMAL"),
-			pos_x, pos_y, fontsize, &fgcol, &bgcol, true);
-		pos_y += offs; gm.chkbox.add(
-			ChkBoxTitle::Hard, String::from("HARD"),
-			pos_x, pos_y, fontsize, &fgcol, &bgcol, false);
-		pos_y += offs; gm.chkbox.add(
-			ChkBoxTitle::Edit, String::from("EDIT"),
-			pos_x, pos_y, fontsize, &fgcol, &bgcol, false);
+        gm.chkbox.set_base(50.0,120.0,250.0, FONT_SIZE*2.0, FONT_SIZE*1.5,"FFFF00FF", "0000A0A0");
+		gm.chkbox.add(ChkBoxTitle::Easy, String::from("EASY"),false);
+		gm.chkbox.add(ChkBoxTitle::Normal, String::from("NORMAL"),true);
+		gm.chkbox.add(ChkBoxTitle::Hard, String::from("HARD"), false);
+		gm.chkbox.add(ChkBoxTitle::Edit, String::from("EDIT"), false);
+		// EDITは現在未対応
 		gm.chkbox.active(ChkBoxTitle::Edit, false);
 
-		// START or QUIT
-		let fontsize = 70.0;
-		let offs =70.0;
-		pos_y += offs; gm.chkbox.add(
-			ChkBoxTitle::Start, String::from("[START]"),
-			pos_x, pos_y, fontsize, &String::from("00FF00FF"), &bgcol, false);
-		pos_y += offs; gm.chkbox.add(
-			ChkBoxTitle::Quit, String::from("[QUIT]"),
-			pos_x, pos_y, fontsize, &String::from("FF0000FF"), &bgcol,false);
+		// スタート／終了
+		// START
+		gm.chkbox.add(ChkBoxTitle::Start, String::from("[START]"), false);
 		gm.chkbox.view_box(ChkBoxTitle::Start, false);
+		gm.chkbox.set_col(ChkBoxTitle::Start, "7777FFFF", "");
+		gm.chkbox.set_offs(ChkBoxTitle::Start,300.0, -180.0);
+		// QUIT
+		gm.chkbox.add(ChkBoxTitle::Quit, String::from("[QUIT]"),false);
+		gm.chkbox.set_col(ChkBoxTitle::Quit, "FF7777FF", "");
 		gm.chkbox.view_box(ChkBoxTitle::Quit, false);
+
+		gm.chkbox.view_hitbox(false);
 
 		gm
 	}
@@ -140,11 +130,12 @@ impl TitleMain {								// タイトル画面
 
 		draw_rectangle(0.0, 60.0, 700.0, 20.0, BLUE);
 
-		dr_text("MINE SWEEPER", 20.0, 10.0, 100.0,
-			&String::from("0000A0FF"),&String::from("FFFFFFFF"));
-
-		dr_text("v1.0", 570.0, 43.0, 50.0,
-			&String::from("0000A0FF"),&String::from("FFFFFFCC"));
+		dr_text_ex("Lets MINE SWEEPER", 0.0, 10.0, 70.0,
+			&String::from("0000A0FF"),&String::from("FFFFFFFF"), self.myfont);
+		dr_text_ex("'", 130.0, 0.0, 70.0,
+			&String::from("0000A0FF"),&String::from("FFFFFFFF"), self.myfont);
+		dr_text_ex("v1.0", 600.0, 40.0, 30.0,
+			&String::from("0000A0FF"),&String::from("FFFFFFCC"), self.myfont);
 
 		// チェックボックスを描く
 		self.chkbox.draw();
