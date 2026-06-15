@@ -1,5 +1,6 @@
 mod myconst;
 mod txtbox;
+mod chkboxmng;
 mod chkbox;
 mod titlemain;
 mod gamemain;

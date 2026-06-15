@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 use crate::draw::*;
-use crate::chkbox::ChkBoxMng;
+use crate::chkboxmng::ChkBoxMng;
 use crate::utils::*;
 use crate::myconst::*;
 use crate::gametable::GameTable;
@@ -213,16 +213,11 @@ impl<'a> GameMain<'a> {
 		}
 
 		// キーボード入力処理
-		let is_keyupdate = self.keycontrol();
+		self.keycontrol();
 
 		// ゲームが開始されているならプレイ時間更新
 		if self.stat == GameStat::Playing {
 			self.tm.played = get_time();
-		}
-
-		// アシスト機能
-		if (is_update || is_keyupdate) && self.stat == GameStat::Playing{
-			self.assist();
 		}
 
 		// 更新が発生した場合
@@ -243,6 +238,9 @@ impl<'a> GameMain<'a> {
 				self.stat = GameStat::Failed;
 				self.mouse.lefton = false;
 				self.mouse.is_left_click = false;
+			} else {
+				// アシスト機能
+				self.assist();
 			}
 		}
 
@@ -338,8 +336,8 @@ impl<'a> GameMain<'a> {
 		};
 		let cursol = self.tb.table.set_mousepos(tablepos);
 
-		// 押しっぱなしの場合はスクロールしない
-		if self.mouse.lefton {
+		// DRAG OPEN 有効で押しっぱなしの場合はスクロールしない
+		if self.mouse.lefton && self.chkbox.get_flg(ChkBoxGame::DragOpen) {
 			return is_update;
 		}
 
@@ -448,8 +446,8 @@ impl<'a> GameMain<'a> {
 		let mut is_update = false;
 
 		// マウス右クリックされていない、マウスが盤面上ではない、なら何もしない
-		if !self.mouse.righton ||
-			self.cursol.index == -1 {
+		if !self.mouse.righton || self.cursol.index == -1 ||
+		   self.stat != GameStat::Playing {
 			return false
 		}
 
@@ -565,10 +563,18 @@ impl<'a> GameMain<'a> {
 
 				// 推論全表示が選択された場合
 				ChkBoxGame::DispAll => {
-					// 安全マス危険マス全部表示
+					// オンの場合安全マス危険マス全部表示
 					if flg {
 						self.chkbox.set_flg(ChkBoxGame::SafeOn, true);
 						self.chkbox.set_flg(ChkBoxGame::DangOn, true);
+					}
+				}
+
+				// 青旗が選択された場合
+				ChkBoxGame::UseBlueFlg => {
+					// オフの場合青旗をクリア
+					if !flg {
+						self.tb.table.clear_blue_flag();
 					}
 				}
 
@@ -592,8 +598,10 @@ impl<'a> GameMain<'a> {
 		self.draw_table();
 
 		// メニュー表示
-		draw_rectangle(0.0, 0.0, self.screen.x, WALL_TOP - 20.0, MENU_COLOR.with_alpha(0.6));
-		draw_rectangle(0.0, WALL_TOP - 20.0, WALL_LEFT - 30.0, self.screen.y + 20.0, MENU_COLOR.with_alpha(0.6));
+		dr_rect(0.0, 0.0, self.screen.x, WALL_TOP - 20.0,
+			0.0, MENU_COLOR, "");
+		dr_rect(0.0, WALL_TOP - 20.0, WALL_LEFT - 30.0, self.screen.y + 20.0,
+			0.0, MENU_COLOR, "");
 
 		let flag_num = self.tb.table.get_num_redflag();
 		let text = format!("SIZE:{}x{}  BOMB:{}  RED FLAG:{}",
@@ -636,13 +644,8 @@ impl<'a> GameMain<'a> {
 				};
 				(get_time_str(self.tm.playst, self.tm.played), fg)
 			};
-		draw_rectangle(20.0, WALL_TOP - 40.0,
-			WALL_LEFT - 70.0,FONT_SIZE_BIG, BLACK);
-/*
-			draw_rectangle_lines(
-			20.0, WALL_TOP,
-			WALL_LEFT - 70.0,FONT_SIZE,5.0, fg);
- */
+		dr_rect(20.0, WALL_TOP - 40.0,
+			WALL_LEFT - 70.0,FONT_SIZE_BIG, 5.00, "000000FF", &fg);
 		dr_text(&timestr,
 			60.0,WALL_TOP - 35.0, FONT_SIZE_BIG * 1.2,
 			&fg, &String::from("000000FF"));
@@ -687,10 +690,11 @@ impl<'a> GameMain<'a> {
 
 		// 縁取り
 		let offs = 10.0;
-		draw_rectangle( -offs, -offs,
+		dr_rect( -offs, -offs,
 			self.tb.width as f32 * PANEL_WIDTH + offs * 2.0,
-			self.tb.height as f32 * PANEL_HEIGHT + offs * 2.0, BLUE);
-
+			self.tb.height as f32 * PANEL_HEIGHT + offs * 2.0,
+			0.0, "0000FFFF", "");
+			
 		// 盤面の描画
 		let is_dangon= self.chkbox.get_flg(ChkBoxGame::DangOn);
 		let mut is_safeon = self.chkbox.get_flg(ChkBoxGame::SafeOn);
@@ -710,25 +714,26 @@ impl<'a> GameMain<'a> {
 	// 盤面の描画
 	//------------------------------
 	fn draw_help(&self) {
-		let fontsize = 20.0;
-		let offs = 5.0;
-		if let Some((typ, help_lines)) =
+		if let Some((_typ, help_lines)) =
 		   self.chkbox.gethelp(self.mouse.pos.x, self.mouse.pos.y) {
 			// ヘルプが設定されていない場合何もしない
 			if help_lines.len() == 0 {
 				return;
 			}
 			// ヘルプ周囲を塗りつぶす
-			let left = self.mouse.pos.x;
-			let top = self.mouse.pos.y + 25.0;
+			let fontsize = 20.0;
+			let offs = 5.0;
+			let left = 20.0;
+			let top = 30.00;
 			let height = help_lines.len() as f32 * (fontsize + offs);
-			let width = 800.0;
-			draw_rectangle(left - 5.0, top - 5.0,
-				width + 10.0, height + 10.0, BLACK.with_alpha(0.5));
+			let width = 750.0;
+			dr_rect(left - 10.0, top - 10.0,
+				width + 20.0, height + 20.0, 0.0,
+				 "000000AA", "");
 			// ヘルプテキストを表示する
 			for (i, line) in help_lines.iter().enumerate() {
 				dr_text_ex(line, left, top + i as f32 * (fontsize + offs),
-					fontsize, "00FFFFFF", "000000FF", self.myfont);
+					fontsize, "FFFFFFFF", "005500FF", self.myfont);
 			}
 		}
 	}

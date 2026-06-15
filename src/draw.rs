@@ -17,7 +17,7 @@ pub fn dr_text(text: &str, pos_x:f32, pos_y:f32, size: f32, fg:&String, bg:&Stri
 	let offs_y = size * 0.6;
 
 	// 背景色の指定がある場合だけ縁取り処理
-	if &bg[6..8] != "00" {
+	if bg.len() > 0 && &bg[6..8] != "00" {
 		let bgcol = mycol(bg);
 		
 		// 輪郭を描画
@@ -67,6 +67,17 @@ pub fn dr_text_ex(text: &str, pos_x:f32, pos_y:f32, size: f32, fg:&str, bg:&str,
 		color: fgcol,
 		..Default::default()};
 	draw_text_ex(text, pos_x, pos_y + offs_y, txt_params.clone());
+}
+
+pub fn dr_rect(left:f32, top:f32, width:f32, height:f32, tick: f32, col:&str, bcol: &str) {
+	// 塗りつぶし色の指定がある場合だけ塗り潰し
+	if col.len() >= 8 && &col[6..8] != "00" {
+		draw_rectangle(left, top, width, height, mycol(col));
+	}
+	// 線幅の制定がある時だけ枠表示
+	if tick > 0.0 {
+		draw_rectangle_lines(left, top, width, height, tick, mycol(bcol));
+	}
 }
 
 fn mycol(hex: &str) -> Color {

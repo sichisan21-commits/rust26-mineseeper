@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 use crate::utils::*;
 use crate::myconst::*;
+use crate::draw::*;
 
 //----------------------------------------
 // 盤面のオブジェクト
@@ -190,12 +191,9 @@ impl Panel {
 		let top = self.pos_y as f32 * PANEL_HEIGHT;
 
 		// 下地を描く
-		draw_rectangle(left,top,
-			PANEL_WIDTH, PANEL_HEIGHT,
-			PANEL_COL_SHADOW);
-		draw_rectangle(left,top,
-			PANEL_WIDTH - PANEL_THICK, PANEL_HEIGHT - PANEL_THICK,
-			WHITE);
+		dr_rect(left,top, PANEL_WIDTH, PANEL_HEIGHT, 0.0, PANEL_COL_SHADOW, "");
+		dr_rect(left,top, PANEL_WIDTH - PANEL_THICK, PANEL_HEIGHT - PANEL_THICK, 0.0,
+			"FFFFFFFF", "");
 
 		// パネルを描く
 		self.draw_panel_close(left, top, is_cursol_around, is_dangon, is_safeon);
@@ -214,8 +212,8 @@ impl Panel {
 		// デフォルトの描画色を設定
 		let mut panelcolor = PANEL_COL_CLOSE;
 
-		// カーソルの周囲で旗が立てられていなければヘルプ表示色の設定
-		if is_cursol_around && self.userflg == UserFlg::None {
+		// カーソルの周囲ならばヘルプ表示色の設定
+		if is_cursol_around {
 			if is_dangon && self.auto_flg == AutoSts::Danger {
 
 				panelcolor = PANEL_COL_DANGER;
@@ -225,9 +223,9 @@ impl Panel {
 		}
 
 		// パネルの表面を描く
-		draw_rectangle(left + PANEL_THICK,top + PANEL_THICK,
+		dr_rect(left + PANEL_THICK,top + PANEL_THICK,
 			PANEL_WIDTH - PANEL_THICK * 2.0, PANEL_HEIGHT - PANEL_THICK * 2.0,
-		   panelcolor);
+		   0.0, panelcolor, "");
 
 		// パネルの文字を描く
 		self.draw_text_close(left, top, is_cursol_around);

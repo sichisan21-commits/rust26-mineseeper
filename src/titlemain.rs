@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use crate::chkbox::ChkBoxMng;
+use crate::chkboxmng::ChkBoxMng;
 use crate::myconst::*;
 use crate::utils::*;
 use crate::draw::*;
@@ -128,11 +128,11 @@ impl<'a> TitleMain<'a> {								// タイトル画面
 		// 盤面全体を塗りつぶす
 		clear_window(LAYOUT_COLOR);
 
-		draw_rectangle(0.0, 60.0, 700.0, 20.0, BLUE);
+		dr_rect(0.0, 60.0, 700.0, 20.0, 0.0, "0000FFFF","");
 
-		dr_text_ex("Lets MINE SWEEPER", 0.0, 10.0, 70.0,
+		dr_text_ex("Lets MINE SWEEPER", 20.0, 10.0, 70.0,
 			&String::from("0000A0FF"),&String::from("FFFFFFFF"), self.myfont);
-		dr_text_ex("'", 130.0, 0.0, 70.0,
+		dr_text_ex("'", 150.0, 20.0, 70.0,
 			&String::from("0000A0FF"),&String::from("FFFFFFFF"), self.myfont);
 		dr_text_ex("v1.0", 600.0, 40.0, 30.0,
 			&String::from("0000A0FF"),&String::from("FFFFFFCC"), self.myfont);

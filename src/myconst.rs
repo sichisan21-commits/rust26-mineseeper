@@ -24,7 +24,7 @@ pub const FONT_SIZE_BIG: f32 = 50.0;			// フォントサイズ（大）
 
 // 背景色
 pub const LAYOUT_COLOR: Color = Color::from_rgba(220, 220, 220, 255);
-pub const MENU_COLOR: Color = Color::from_rgba(200, 200, 230, 255);
+pub const MENU_COLOR: &str = "AAEEEE77";
 pub const START_WAIT: f64 = 0.03;				// ゲーム開始直後の入力待ち
 
 //----------------------------------------
@@ -39,11 +39,11 @@ pub const PANEL_FONT_OFFSX: f32 = 12.0;           // 位置調整
 pub const PANEL_FONT_OFFSY: f32 = 37.0;           // 位置調整
 
 // 色
-pub const PANEL_COL_SHADOW: Color = Color::from_rgba(80, 80, 128, 255); 
-pub const PANEL_COL_CLOSE: Color = Color::from_rgba(180, 180, 180, 255);
+pub const PANEL_COL_SHADOW: &str = "555577FF";
+pub const PANEL_COL_CLOSE: &str = "BBBBBBFF";
 pub const PANEL_COL_OPEN: Color = Color::from_rgba(230, 230, 230, 255);
-pub const PANEL_COL_DANGER: Color = Color::from_rgba(220, 180, 180, 255);
-pub const PANEL_COL_SAFETY: Color = Color::from_rgba(180, 220, 220, 255);
+pub const PANEL_COL_DANGER: &str = "CCAAAAFF";
+pub const PANEL_COL_SAFETY: &str = "AACCDDFF";
 
 //----------------------------------------
 // enum

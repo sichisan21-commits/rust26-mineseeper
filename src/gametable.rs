@@ -1,7 +1,6 @@
 use macroquad::prelude::*;
 use crate::panel::Panel;
 use crate::utils::*;
-use crate::draw::*;
 use crate::myconst::*;
 
 #[derive(Debug, Copy, Clone)]
@@ -250,7 +249,10 @@ impl GameTable {
     //------------------------------
     pub fn click_left(&mut self) -> bool { 
         // クリック位置が盤面外、あるいはすでに開かれているなら何もしない
-        if self.cursol.index == -1 || self.table[self.cursol.index as usize].is_open() {
+        // 旗の立っているマスも開かせない
+        if self.cursol.index == -1 ||
+           self.table[self.cursol.index as usize].is_open() ||
+           self.table[self.cursol.index as usize].get_userflg() != UserFlg::None {
             return false
         }
 
@@ -290,6 +292,17 @@ impl GameTable {
         for index in 0..self.width * self.height {
             self.table[index as usize].bold_off();
                 self.table[index as usize].set_autoflag(AutoSts::None, false);
+        }
+    }
+
+    //------------------------------
+    // 全ての補助フラグをクリアする
+    //------------------------------
+    pub fn clear_blue_flag(&mut self) {
+        for index in 0..self.width * self.height {
+            if self.table[index as usize].get_userflg() == UserFlg::BlueFlg {
+                self.table[index as usize].set_userflg(UserFlg::None);
+            }
         }
     }
 
