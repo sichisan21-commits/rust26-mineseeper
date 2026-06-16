@@ -71,6 +71,7 @@ pub enum ChkBoxGame {						// ゲーム用チェックボックス
 	SafeOn,    		        	        	// 安全マスの表示
 	DispAll,       		        	        // 前面表示
 	BelieveFlag,							// ユーザの立てた旗を正しいと仮定する
+	Reset,									// 盤面のリセット
 	Title,									// タイトルへ戻る
 }
 

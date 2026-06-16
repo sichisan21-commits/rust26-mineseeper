@@ -77,12 +77,18 @@ impl<'a> GameMain<'a> {
 		gm.chkbox.add(ChkBoxGame::DragOpen, String::from("DRAG OPEN"), false);
 		gm.chkbox.add(ChkBoxGame::UseBlueFlg, String::from("USE BLUEFLAG"), false);
 		gm.chkbox.add(ChkBoxGame::BoldFlg, String::from("USE BOLD"), false);
-		gm.chkbox.set_offs(ChkBoxGame::BoldFlg, 0.0, 60.0);
+		gm.chkbox.set_offs(ChkBoxGame::BoldFlg, 0.0, 50.0);
 		gm.chkbox.add(ChkBoxGame::Inference, String::from("USE INFERENCE"), false);
 		gm.chkbox.add(ChkBoxGame::UndoFlg, String::from("USE UNDO"), false);
+		// リセットボタン作成
+		gm.chkbox.add(ChkBoxGame::Reset, String::from(" [RESET GAME]"), false);
+		gm.chkbox.set_offs(ChkBoxGame::Reset, 0.0, 10.0);
+		gm.chkbox.set_col(ChkBoxGame::Reset, "3333FFFF","");
+		gm.chkbox.view_box(ChkBoxGame::Reset, false);
+		// タイトルへ戻るボタン作成
 		gm.chkbox.add(ChkBoxGame::Title, String::from(" [RETURN TITLE]"), false);
-		gm.chkbox.set_col(ChkBoxGame::Title, "007777FF","");
-		gm.chkbox.set_offs(ChkBoxGame::Title, 0.0, 10.0);
+		gm.chkbox.set_col(ChkBoxGame::Title, "FF3333FF","");
+		gm.chkbox.view_box(ChkBoxGame::Title, false);
 		
 		// 子のチェックボックス作成
         gm.chkbox.set_base(20.0,180.0,200.0, 25.0, 20.0,"000000FF", "FFFFFFFF");
@@ -93,9 +99,6 @@ impl<'a> GameMain<'a> {
 		gm.chkbox.addsub(ChkBoxGame::BelieveFlag,ChkBoxGame::Inference, String::from("BELEVE FLAG"), false);
 
 		gm.chkbox.view_hitbox(false);
-
-		// タイトルへ戻るはボックス部分を非表示
-		gm.chkbox.view_box(ChkBoxGame::Title, false);
 
 		// 説明文追加
 		gm.chkbox.set_help(ChkBoxGame::CursolFlg,"[CURSOL FLAME]\n９×９のカーソルを表示します。");
@@ -109,6 +112,7 @@ impl<'a> GameMain<'a> {
 		gm.chkbox.set_help(ChkBoxGame::DispAll,"[ALL DISPLAY]\n全体に危険／安全パネルを表示します。");
 		gm.chkbox.set_help(ChkBoxGame::BelieveFlag,"[BELIEVE FLAG]\nあなたの立てた旗を信じて推論します。");
 		gm.chkbox.set_help(ChkBoxGame::UndoFlg,"[USE UNDO]\nUNDO（やり直し）を有効にします。");
+		gm.chkbox.set_help(ChkBoxGame::Reset,"[RESET GAME]\n盤面を作り直します。");
 		gm.chkbox.set_help(ChkBoxGame::Title,"[RETURN TITLE]\nタイトルに戻ります。");
 
 		gm
@@ -204,6 +208,15 @@ impl<'a> GameMain<'a> {
 		// マウスクリック判定
 		is_update |= self.click_tbl_left();
 		is_update |= self.click_tbl_right();
+
+		// 「タイトルへ」が選択されたらタイトルへ戻る
+		if self.chkbox.get_flg(ChkBoxGame::Reset) {
+			// 内部的にフラグを落としておく
+			self.chkbox.set_flg(ChkBoxGame::Reset, false);
+			self.initial_game(START_WAIT);
+			self.stat = GameStat::Ready;
+			return GameMode::Game;
+		}
 
 		// 「タイトルへ」が選択されたらタイトルへ戻る
 		if self.chkbox.get_flg(ChkBoxGame::Title) {
@@ -626,7 +639,7 @@ impl<'a> GameMain<'a> {
 		dr_text(text, 20.0, 120.0, FONT_SIZE_BIG, &fg, &bg);
 
 		// チェックボックスを表示する
-		dr_text_ex("-- ASSIST --", 20.0, 290.0, FONT_SIZE,
+		dr_text_ex("-- ASSIST --", 30.0, 290.0, 25.0,
 			"A0A0FFFF", "000000FF", self.myfont);
 		self.chkbox.draw();
 	
