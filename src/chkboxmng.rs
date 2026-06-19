@@ -1,21 +1,23 @@
 use macroquad::prelude::*;
+use macroquad::text::Font;
 use crate::utils::*;
 use crate::chkbox::ChkBox;
 
-pub struct ChkBoxMng<'a,T> {					// 管理テーブル
+pub struct ChkBoxMng<T> {						// 管理テーブル
 	chkboxs: Vec<ChkBox<T>>,					// チェックボックス配列
 	pos: PosTable,								// 起点座標
 	size: PosTable,								// 縦横サイズ
 	fsize: f32,									// フォントサイズ
 	fgcol: String,								// 基本色（前）
 	bgcol: String,								// 基本色（後）
-	myfont: &'a Font,							// フォント情報
+	nextpos: PosTable,							// 次のチェックボックスの座標（絶対値）
+	nextoffs: PosTable,							// 次のチェックボックスのオフセット
 }
 
 //--------------------------------------------------
 // チェックボックス管理テーブル
 //--------------------------------------------------
-impl<'a,T> ChkBoxMng<'a,T>
+impl<T> ChkBoxMng<T>
     where
         T: std::fmt::Debug,
         T: Copy + PartialEq,
@@ -23,15 +25,16 @@ impl<'a,T> ChkBoxMng<'a,T>
 	//--------------------------------------------------
 	// 初期化
 	//--------------------------------------------------
-	pub fn new(myfont:&'a Font) -> ChkBoxMng<'a,T> {
+	pub fn new() -> ChkBoxMng<T> {
 		ChkBoxMng {
 			chkboxs: Vec::new(),
-			pos: PosTable{x: 0.0, y:0.0},
+			pos: PosTable{x:0.0, y:0.0},
 			size: PosTable{x:0.0, y:0.0},
 			fsize: 0.0,
 			fgcol: String::new(),
 			bgcol: String::new(),
-			myfont,
+			nextpos: PosTable{x:0.0, y:0.0},
+			nextoffs: PosTable{x:0.0, y:0.0},
 		}
 	}
 
@@ -50,9 +53,11 @@ impl<'a,T> ChkBoxMng<'a,T>
 	// チェックボックス追加
 	//--------------------------------------------------
 	pub fn add(&mut self, mytype:T, text:String, flg: bool) {
-		// チェックボックスの座標を決める
-		let mut pos = PosTable{x: self.pos.x, y:self.pos.y};
-		pos.y += self.size.y * self.chkboxs.len() as f32;
+		// 次の座標の指定があるなら絶対座標とする
+		let mut is_absolute  = false;
+		if self.nextpos.x != 0.0 || self.nextpos.y != 0.0 {
+			is_absolute = true;
+		}
 
 		// 生成
 		let chkbox = ChkBox::new(
@@ -62,12 +67,17 @@ impl<'a,T> ChkBoxMng<'a,T>
 			text,
 			self.fsize,
 			flg,
-			pos,
+			self.nextpos,
+			is_absolute,
+			self.nextoffs, 
 			self.size,
 			self.fgcol.clone(),
 			self.bgcol.clone(),
 		);			
 		self.chkboxs.push(chkbox);
+		// 次の座標もオフセットもリセットする
+		self.nextpos = PosTable{x:0.0, y:0.0};
+		self.nextoffs = PosTable{x:0.0, y:0.0};
 
 		// チェックボックスの座標更新
 		self.calc_position();
@@ -86,11 +96,6 @@ impl<'a,T> ChkBoxMng<'a,T>
 			}
 		}
 
-		// チェックボックスの座標を決める
-		let mut pos = PosTable{x: self.pos.x, y:self.pos.y};
-		pos.x += 30.0;
-		pos.y += self.size.y * self.chkboxs.len() as f32;
-
 		// 生成
 		let chkbox = ChkBox::new(
 			mytype,
@@ -99,15 +104,36 @@ impl<'a,T> ChkBoxMng<'a,T>
 			text,
 			self.fsize,
 			flg,
-			pos,
+			self.nextpos,
+			false,
+			self.nextoffs, 
 			self.size,
 			self.fgcol.clone(),
 			self.bgcol.clone(),
 		);
 		self.chkboxs.push(chkbox);
 
+		// 次の座標もオフセットもリセットする
+		self.nextpos = PosTable{x:0.0, y:0.0};
+		self.nextoffs = PosTable{x:0.0, y:0.0};
+
 		// チェックボックスの座標更新
 		self.calc_position();
+	}
+
+	//--------------------------------------------------
+	// 次のチェックボックスの絶対座標を設定（１回限り）
+	//--------------------------------------------------
+	pub fn set_next_pos(&mut self, pos:PosTable) {
+		self.nextpos.x = pos.x + self.pos.x;
+		self.nextpos.y = pos.y + self.pos.y;
+	}
+
+	//--------------------------------------------------
+	// 次のチェックボックスのオフセットを設定（１回限り）
+	//--------------------------------------------------
+	pub fn set_next_offs(&mut self, offs:PosTable) {
+		self.nextoffs = offs;
 	}
 
 	//--------------------------------------------------
@@ -129,12 +155,19 @@ impl<'a,T> ChkBoxMng<'a,T>
 			}
 
 			// 自分自身の座標を更新する
-			let mut pos = self.chkboxs[parent].get_pos();
+			let mut pos= self.chkboxs[parent].get_pos();
 			let offs = self.chkboxs[parent].get_offs();
 			let size = self.chkboxs[parent].get_size();
-			pos.x = pos_x;
-			pos.y = pos_y;
-			self.chkboxs[parent].set_pos(pos);
+			if self.chkboxs[parent].is_absolute() {
+				// 対象が絶対座標の場合、自身の座標を起点とする
+				pos_x = pos.x;
+				pos_y = pos.y;
+			} else {
+				// 相対座標の場合、自身の座標を更新する
+				pos.x = pos_x;
+				pos.y = pos_y;
+				self.chkboxs[parent].set_pos(pos);
+			}
 			pos_x += offs.x;
 			pos_y += size.y + offs.y;
 
@@ -150,6 +183,7 @@ impl<'a,T> ChkBoxMng<'a,T>
 				// 子の座標を更新する
 				let mut pos = self.chkboxs[child].get_pos();
 				let size = self.chkboxs[child].get_size();
+				pos.x = pos_x + 30.0;
 				pos.y = pos_y;
 				self.chkboxs[child].set_pos(pos);
 				pos_y += size.y;
@@ -218,10 +252,27 @@ impl<'a,T> ChkBoxMng<'a,T>
 	//------------------------------
 	// チェックボックスの有効無効変更
 	//------------------------------
-	pub fn active(&mut self, mytype: T, flg: bool) {
+	pub fn set_active_flg(&mut self, mytype: T, flg: bool) {
 		for chkbox in &mut self.chkboxs {
 			if chkbox.get_type() == mytype {
-				chkbox.active(flg);
+				chkbox.set_active_flg(flg);
+			}
+		}
+	}
+
+	//------------------------------
+	// チェックボックスの有効無効変更
+	//------------------------------
+	pub fn set_lock_flg(&mut self, mytype: T, flg: bool) {
+		for chkbox in &mut self.chkboxs {
+			if chkbox.get_type() == mytype {
+				chkbox.set_lock_flg(flg);
+			}
+			// 子のチェックボックスにも設定する
+			if let Some(parent_type) = chkbox.get_parent() {
+				if parent_type == mytype {
+					chkbox.set_lock_flg(flg);
+				}
 			}
 		}
 	}
@@ -303,7 +354,7 @@ impl<'a,T> ChkBoxMng<'a,T>
 		for child in 0..self.chkboxs.len() {
 			if let Some(parent_type) = self.chkboxs[child].get_parent() {
 				if parent_type == self.chkboxs[parent].get_type(){
-					self.chkboxs[child].active(flg);
+					self.chkboxs[child].set_active_flg(flg);
 					is_update = true;
 				}
 			}
@@ -318,9 +369,9 @@ impl<'a,T> ChkBoxMng<'a,T>
 	//------------------------------
 	// 全チェックボックス描画
 	//------------------------------
-	pub fn draw(&self) {
+	pub fn draw(&self, myfont: &Font) {
 		for chkbox in &self.chkboxs {
-			chkbox.draw(self.myfont);
+			chkbox.draw(myfont);
 		}
 	}
 }

@@ -13,7 +13,7 @@ pub const MAX_ZOOMX: f32 = 10.0;
 pub const MAX_ZOOMY: f32 = 10.0;
 
 // 位置・サイズ
-pub const WALL_LEFT: f32 = 300.0;               // 左の壁
+pub const WALL_LEFT: f32 = 220.0;               // 左の壁
 pub const WALL_TOP: f32 = 80.0;                 // 上の壁
 pub const WALL_RIGHT: f32 = 20.0;               // 右の壁
 pub const WALL_BOTTOM: f32 = 20.0;              // 下の壁
@@ -24,8 +24,8 @@ pub const FONT_SIZE_BIG: f32 = 50.0;			// フォントサイズ（大）
 
 // 背景色
 pub const LAYOUT_COLOR: Color = Color::from_rgba(220, 220, 220, 255);
-pub const MENU_COLOR: &str = "AAEEEE77";
-pub const START_WAIT: f64 = 0.03;				// ゲーム開始直後の入力待ち
+pub const MENU_COLOR: &str = "9999CC77";
+pub const START_WAIT: f64 = 1.0;				// ゲーム開始直後の入力待ち
 
 //----------------------------------------
 // パネル情報
@@ -39,8 +39,8 @@ pub const PANEL_FONT_OFFSX: f32 = 12.0;           // 位置調整
 pub const PANEL_FONT_OFFSY: f32 = 37.0;           // 位置調整
 
 // 色
-pub const PANEL_COL_SHADOW: &str = "555577FF";
-pub const PANEL_COL_CLOSE: &str = "BBBBBBFF";
+pub const PANEL_COL_SHADOW: &str = "777777FF";
+pub const PANEL_COL_CLOSE: &str = "AAEEAAFF";
 pub const PANEL_COL_OPEN: Color = Color::from_rgba(230, 230, 230, 255);
 pub const PANEL_COL_DANGER: &str = "CCAAAAFF";
 pub const PANEL_COL_SAFETY: &str = "AACCDDFF";
@@ -49,20 +49,29 @@ pub const PANEL_COL_SAFETY: &str = "AACCDDFF";
 // enum
 //----------------------------------------
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum ChkBoxTitle {						// タイトル用チェックボックス群
+pub enum CBTitle {						// タイトル用チェックボックス群
 	Easy,									// イージー
 	Normal,									// ノーマル
 	Hard,									// ハード
 	Edit,									// エディット
 	Start,									// 開始
+	Settings,								// 設定
 	Quit,									// 終了
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum ChkBoxGame {						// ゲーム用チェックボックス
+pub enum CBGame {							// ゲーム用チェックボックス
+	Reset,									// 盤面のリセット
+	Title,									// タイトルへ戻る
+	Settings,								// 設定
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum CBSetting {						// 設定用チェックボックス
 	CursolFlg,								// カーソル表示
 	DragOpen,								// 引きづって開く
 	UseBlueFlg,								// 青い旗の使用
+	BlueFlgFirst,							// 青い旗を優先する
 	UndoFlg,								// UNDO使用
 	BoldFlg,								// 確実に旗が立てられるマスの強調
 	BoldSafeOn,								// 強調用の安全マス表示
@@ -71,8 +80,15 @@ pub enum ChkBoxGame {						// ゲーム用チェックボックス
 	SafeOn,    		        	        	// 安全マスの表示
 	DispAll,       		        	        // 前面表示
 	BelieveFlag,							// ユーザの立てた旗を正しいと仮定する
-	Reset,									// 盤面のリセット
-	Title,									// タイトルへ戻る
+	HideOn,									// 盤面を隠す
+	HideLv1,								// 盤面を隠す-レベル１
+	HideLv2,								// 盤面を隠す-レベル２
+	HideLv3,								// 盤面を隠す-レベル３
+	HideNumOn,								// 数字を隠す
+	HideNumLv1,								// 盤面を隠す-レベル１
+	HideNumLv2,								// 盤面を隠す-レベル２
+	HideNumLv3,								// 盤面を隠す-レベル３
+	Close,									// 閉じる
 }
 
 #[derive(Debug,PartialEq)]

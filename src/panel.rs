@@ -77,18 +77,34 @@ impl Panel {
 	//------------------------------
 	// 旗のオン／オフ
 	//------------------------------
-	pub fn userflg(&mut self, use_blueflg: bool) {
-		// Close → RedFlg → BlueFlg の順に巡回する
+	pub fn userflg(&mut self, use_blueflg: bool, blueflg_first: bool) {
 		self.userflg = match self.userflg {
-			UserFlg::None    => UserFlg::RedFlg,
+			// 旗が立っていない場合
+			UserFlg::None    => {
+				if blueflg_first {
+					UserFlg::BlueFlg
+				} else {
+					UserFlg::RedFlg
+				}
+			},
+
+			// 赤の旗が立っている場合
 			UserFlg::RedFlg  => {
-				if use_blueflg {
+				if use_blueflg && !blueflg_first {
 					UserFlg::BlueFlg
 				} else {
 					UserFlg::None
 				}
 			},
-			UserFlg::BlueFlg => UserFlg::None,
+
+			// 青の旗が立っている場合
+			UserFlg::BlueFlg => {
+				if blueflg_first {
+					UserFlg::RedFlg
+				} else {
+					UserFlg::None
+				}
+			}
 		};
 	}
 
@@ -177,18 +193,40 @@ impl Panel {
 	//------------------------------
 	// 自分自身を描画
 	//------------------------------
-	pub fn draw_panel(&self, cursol_x: i32, cursol_y: i32, is_alldraw: bool, is_dangon:bool, is_safeon:bool) {
+	pub fn draw_panel(&self, cursol_x:i32, cursol_y:i32, is_alldraw: bool, is_dangon:bool, is_safeon:bool, hide_lv:i32, hidenum_lv:i32, is_playng: bool) {
 		let mut is_cursol_around = true;
+
+		//--------------------------------------------------
+		// HIDE判定
+		//--------------------------------------------------
+		let offs_cur_x = (cursol_x - self.pos_x).abs();
+		let offs_cur_y = (cursol_y - self.pos_y).abs();
+		let mut hide_flg = false;
+		if (hide_lv == 3 && (offs_cur_x > 0 || offs_cur_y > 0)) ||
+		   (hide_lv == 2 && (offs_cur_x > 1 || offs_cur_y > 1)) ||
+		   (hide_lv == 1 && (offs_cur_x > 2 || offs_cur_y > 2)) {
+			hide_flg = true;
+		}
+
+		//--------------------------------------------------
+		// HIDE NUMBER 判定
+		//--------------------------------------------------
+		let mut num_hide_flg = false;
+		if (hidenum_lv == 3 && (offs_cur_x > 0 || offs_cur_y > 0)) ||
+		   (hidenum_lv == 2 && (offs_cur_x > 1 || offs_cur_y > 1)) ||
+		   (hidenum_lv == 1 && (offs_cur_x > 2 || offs_cur_y > 2)) {
+			num_hide_flg = true;
+		}
+
+		// 描画位置を算出
+		let left = self.pos_x as f32 * PANEL_WIDTH;
+		let top = self.pos_y as f32 * PANEL_HEIGHT;
 
 		// カーソル周囲９マスか判定
 		if !is_alldraw {
 			is_cursol_around =  (cursol_x - self.pos_x).abs() <= 1 &&
 				(cursol_y - self.pos_y).abs() <= 1;
 		}
-
-		// 描画位置を算出
-		let left = self.pos_x as f32 * PANEL_WIDTH;
-		let top = self.pos_y as f32 * PANEL_HEIGHT;
 
 		// 下地を描く
 		dr_rect(left,top, PANEL_WIDTH, PANEL_HEIGHT, 0.0, PANEL_COL_SHADOW, "");
@@ -197,7 +235,19 @@ impl Panel {
 
 		// パネルを描く
 		self.draw_panel_close(left, top, is_cursol_around, is_dangon, is_safeon);
-		self.draw_panel_open(left, top, is_cursol_around);
+		self.draw_panel_open(left, top, is_cursol_around, num_hide_flg);
+
+		// HIDEオンの場合塗りつぶす
+		if hide_flg {
+			let mut fgcol = "333333FF";
+			if !is_playng {
+				fgcol = "333333AA";
+			}
+			dr_rect(left,top, PANEL_WIDTH, PANEL_HEIGHT, 3.0, fgcol, "777777FF");
+			if self.userflg != UserFlg::None {
+				self.draw_text_close(left, top, is_cursol_around);
+			}
+		}
 	}
 
 	//------------------------------
@@ -215,7 +265,6 @@ impl Panel {
 		// カーソルの周囲ならばヘルプ表示色の設定
 		if is_cursol_around {
 			if is_dangon && self.auto_flg == AutoSts::Danger {
-
 				panelcolor = PANEL_COL_DANGER;
 			} else if is_safeon && self.auto_flg == AutoSts::Safety {
 				panelcolor = PANEL_COL_SAFETY;
@@ -234,7 +283,7 @@ impl Panel {
 	//------------------------------
 	// 閉じているパネルの描画
 	//------------------------------
-	fn draw_panel_open(&self, left:f32, top: f32, is_cursol_around: bool){
+	fn draw_panel_open(&self, left:f32, top:f32, is_cursol_around:bool, num_hide_flg:bool){
 		// 閉じているなら何もしない
 		if !self.is_open {
 			return
@@ -260,7 +309,9 @@ impl Panel {
 		}
 		
 		// テキストを描画
-		self.draw_text_open(left, top, is_cursol_around);
+		if !num_hide_flg {
+			self.draw_text_open(left, top, is_cursol_around);
+		}
 	}
 
 	//------------------------------

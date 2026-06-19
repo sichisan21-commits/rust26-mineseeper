@@ -37,9 +37,8 @@ pub fn dr_text(text: &str, pos_x:f32, pos_y:f32, size: f32, fg:&String, bg:&Stri
 // 文字列描画
 //--------------------------------------------------
 pub fn dr_text_ex(text: &str, pos_x:f32, pos_y:f32, size: f32, fg:&str, bg:&str, myfont: &Font) {
-
 	let fgcol = mycol(fg);
-	let offs_y = size * 0.85;
+	let offs_y = size * 1.0;
 
 	// 背景色の指定がある場合だけ縁取り処理
 	if &bg[6..8] != "00" {

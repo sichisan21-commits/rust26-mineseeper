@@ -4,10 +4,12 @@ use crate::draw::*;
 
 pub struct ChkBox<T>{
 	is_active: bool,							// 有効／無効
+	is_lock: bool,								// 変更不可（値は有効）
 	mytype: T,									// チェックボックスのタイプ
 	parent: Option<T>,							// 親となるチェックボックス
 	text: String,								// 表示文字列
 	flg: bool,									// チェックの状態
+	is_absolute: bool,							// 絶対座標か相対座標か
 	pos: PosTable,								// 実座標
 	size: PosTable,								// 当たり判定のサイズ
 	offs: PosTable,								// オフセット
@@ -26,20 +28,22 @@ impl<T> ChkBox<T>
 	where
 		T: Copy + PartialEq,
 	{
-	pub fn new(mytype:T, parent:Option<T>, is_active: bool, text:String, fsize:f32, flg: bool, pos:PosTable, size:PosTable, fgcol:String, bgcol:String) -> ChkBox<T> {
+	pub fn new(mytype:T, parent:Option<T>, is_active: bool, text:String, fsize:f32, flg: bool, pos:PosTable, is_absolute:bool, offs:PosTable,size:PosTable, fgcol:String, bgcol:String) -> ChkBox<T> {
 		// チェックボックスの座標を決める
 		ChkBox {
+			is_active,
+			is_lock: false,
 			mytype,
 			text,
 			pos,
+			is_absolute,
 			fsize,
 			fgcol,
 			bgcol,
 			flg,
 			parent,
-			is_active,
 			viewbox: true,
-			offs: PosTable{x: 0.0, y: 0.0},
+			offs,
 			size,
 			hitbox: false,
 			help_txt: Vec::new(),
@@ -57,7 +61,7 @@ impl<T> ChkBox<T>
 		let left = self.pos.x + self.offs.x;
 		let top = self.pos.y + self.offs.y;
 		let right = left + self.size.x;
-		let bottom = top + self.size.y;
+		let bottom = top + self.size.y - 10.0;
 		if mouse_x >= left && mouse_x <= right &&
 		   mouse_y >= top && mouse_y <= bottom {
 			return true
@@ -66,10 +70,10 @@ impl<T> ChkBox<T>
 	}
 
 	//--------------------------------------------------
-	// チェックボックスをクリック（座標が一致していれば）
+	// チェックボックスをクリック
 	//--------------------------------------------------
 	pub fn click(&mut self) {
-		if self.is_active {
+		if self.is_active && !self.is_lock {
 			self.flg ^= true;
 		}
 	}
@@ -115,6 +119,13 @@ impl<T> ChkBox<T>
 	}
 
 	//--------------------------------------------------
+	// 絶対座標指定かどうか
+	//--------------------------------------------------
+	pub fn is_absolute(&self) -> bool {
+		self.is_absolute
+	}
+
+	//--------------------------------------------------
 	// 上方向の余白を設定する
 	//--------------------------------------------------
 	pub fn set_offs(&mut self, offs: PosTable)  {
@@ -138,7 +149,7 @@ impl<T> ChkBox<T>
 	//--------------------------------------------------
 	// 有効無効を設定する
 	//--------------------------------------------------
-	pub fn active(&mut self, flg: bool)  {
+	pub fn set_active_flg(&mut self, flg: bool)  {
 		self.is_active = flg;
 	}
 
@@ -147,6 +158,13 @@ impl<T> ChkBox<T>
 	//--------------------------------------------------
 	pub fn is_active(&self) -> bool {
 		self.is_active
+	}
+
+	//--------------------------------------------------
+	// 有効無効を設定する
+	//--------------------------------------------------
+	pub fn set_lock_flg(&mut self, flg: bool)  {
+		self.is_lock = flg;
 	}
 
 	//--------------------------------------------------
@@ -192,7 +210,9 @@ impl<T> ChkBox<T>
 	// フラグを返却する
 	//--------------------------------------------------
 	pub fn set_flg(&mut self, flg: bool) {
-		self.flg = flg;
+		if self.is_active && !self.is_lock {
+			self.flg = flg;
+		}
 	}
 
 	//--------------------------------------------------
@@ -215,15 +235,23 @@ impl<T> ChkBox<T>
 			}
 		};
 
+		// ロック中の場合薄く表示する
+		let mut fgcol = self.fgcol.clone();
+		let mut bgcol = self.bgcol.clone();
+		if self.is_lock {
+			fgcol.replace_range(6..8, "AA");
+			bgcol.replace_range(6..8, "55");
+		}
+
 		// 描画
 		dr_text_ex(&format!("{}{}",check, self.text),
 			self.pos.x + self.offs.x, self.pos.y + self.offs.y,
-			self.fsize, &self.fgcol, &self.bgcol, myfont);
+			self.fsize, &fgcol, &bgcol, myfont);
 
 		// 当たり判定表示
 		if self.hitbox {
 			let left = self.pos.x + self.offs.x;
-			let top = self.pos.y + self.offs.y;
+			let top = self.pos.y + self.offs.y - 10.0;
 			dr_rect(left, top, self.size.x, self.size.y, 3.0, "", "FF0000FF");
 		}
 	}
