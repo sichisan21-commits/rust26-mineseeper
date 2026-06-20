@@ -40,6 +40,7 @@ pub struct GameMain {						// ゲームメイン情報
 	screen: Vec2,							// ウインドウサイズ
 	mouse: MouseTbl,	   	 	            // マウスカーソル位置
 	cursol: MyCursol,                       // カーソル位置
+	death_cnt: i32,							// 死んだ回数
 	tm: MyTime,								// 時刻関連
 	tb: TableInfo,                       	// 盤面情報
 	chkbox: ChkBoxMng<CBGame>,				// 自作チェックボックス
@@ -60,6 +61,7 @@ impl GameMain {
 			stat: GameStat::Ready,
 			screen: Vec2 {x: screen_width(), y: screen_height()},
 			tm: MyTime {gamewait: 0.0, waitst: 0.0, playst: 0.0, played: 0.0},
+			death_cnt: 0,
 			mouse: MouseTbl{
 				pos: PosTable{x:0.0,y:0.0},
 				lefton: false, lefton_now: false, leftoff_now: false,
@@ -127,6 +129,9 @@ impl GameMain {
 		if wait != 0.0 {
 			self.tm.waitst = get_time();
 		}
+
+		// 死んだ回数をリセット
+		self.death_cnt = 0;
 
 		// クリック待ちへ遷移
 		self.stat = GameStat::Ready;
@@ -231,6 +236,7 @@ impl GameMain {
 		if self.tb.table.open_bomnum() > 0 {
 			self.stat = GameStat::Failed;
 			self.mouse_click_clear();
+			self.death_cnt += 1;
 		} else {
 			// アシスト機能
 			self.assist();
@@ -533,18 +539,6 @@ impl GameMain {
 			return is_update
 		}
 
-/*
-		//--------------------------------------------------
-		// ゲームが待機中なら初期化しなおす
-		//--------------------------------------------------
-		if self.mouse.lefton &&
-			(self.stat == GameStat::Success || self.stat == GameStat::Failed) {
-			self.initial_game(START_WAIT);
-			self.stat = GameStat::Ready;
-			return true
-		}
- */
-
 		//--------------------------------------------------
 		// ゲームは開始しクリック待ちならゲーム開始処理を行う
 		//--------------------------------------------------
@@ -769,7 +763,7 @@ impl GameMain {
 
 		// HIDE レベルの表示
 		let left = 0.0;
-		let top = 350.0;
+		let top = 330.0;
 		let mut text = "";
 		if hide_lv > 0 || hidenum_lv > 0 {
 			dr_rect(left, top, WALL_LEFT -30.0, 60.0, 0.0, "FF000055", "");
@@ -791,19 +785,21 @@ impl GameMain {
 		dr_text(text, left + 20.0, top + 30.0, FONT_SIZE,
 			&String::from("FF0000FF"), &String::from("000000FF"));
 
+		// 死んだ回数を表示
+		self.draw_death_cnt();
 /*
-		// デバッグ
+			// デバッグ
 		let mut pos_y = 400.0;
 		let font_size = 30.0;
 		let font_offs = 30.0;
 		pos_y += font_offs;dr_text_ex(&format!("SCREEN:{},{} ZOOM:{},{}",self.screen.x,self.screen.y,self.tb.zoom.x, self.tb.zoom.y),
-			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",self.myfont);
+			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",myfont);
 		pos_y += font_offs;dr_text_ex(&format!("MOUSE:{},{}",self.mouse.pos.x,self.mouse.pos.y),
-			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",self.myfont);
+			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",myfont);
 		pos_y += font_offs;dr_text_ex(&format!("CURSOL:{},{}:{}",self.cursol.x,self.cursol.y,self.cursol.index),
-			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",self.myfont);
+			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",myfont);
 		pos_y += font_offs;dr_text_ex(&format!("TIME:{}",get_time()),
-			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",self.myfont);
+			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",myfont);
 */
 		// 設定画面表示
 		self.setting.as_ref().unwrap().borrow().draw(myfont);
@@ -852,6 +848,38 @@ impl GameMain {
 		set_default_camera();
 	}
 
+	//------------------------------
+	// 死んだ回数を表示する
+	//------------------------------
+	fn draw_death_cnt(&self) {
+		// １度も死んでいないまたは１回目の死亡の瞬間は表示しない
+		if self.death_cnt == 0 ||
+		   self.death_cnt == 1 && self.stat == GameStat::Failed {
+			return
+		}
+
+		let origin_x = 10.0;
+		let origin_y = 500.0;
+		let offs = 15.0;
+		let mut draw_cnt = 0;
+		'root: for y in 0..65535 {
+			for x in 0..10 {
+				dr_rect(origin_x + x as f32 * offs, origin_y + y as f32 * offs,
+					 9.0, 9.0, 1.0, "FF4444FF", "000000FF");
+				dr_rect(origin_x + x as f32 * offs + 2.0, origin_y + y as f32 * offs + 2.0,
+					 2.0, 3.0, 0.0, "000000FF", "");
+				dr_rect(origin_x + x as f32 * offs + 6.0, origin_y + y as f32 * offs + 2.0,
+					 2.0, 3.0, 0.0, "000000FF", "");
+				dr_rect(origin_x + x as f32 * offs + 1.0, origin_y + y as f32 * offs + 6.0,
+					 2.0, 3.0, 0.0, "00000077", "");
+				draw_cnt += 1;
+				if draw_cnt >= self.death_cnt {
+					break 'root;
+				}
+			}
+		}
+
+	}
 }
 
 //------------------------------
