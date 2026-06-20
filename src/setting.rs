@@ -55,6 +55,7 @@ impl GameSettings {
 		self.chkbox.add(CBSetting::BoldFlg, String::from("USE BOLD"), false);
 		self.chkbox.add(CBSetting::Inference, String::from("USE INFERENCE"), false);
 		self.chkbox.add(CBSetting::UndoFlg, String::from("USE UNDO"), false);
+		self.chkbox.add(CBSetting::DispAll,String::from("All DISPLAY"), false);
 		// 確定（閉じる）ボタン（絶対位置）
 		self.chkbox.set_next_pos(PosTable{x:460.0, y:350.0});
 		self.chkbox.add(CBSetting::Close, String::from("[CLOSE]"), true);
@@ -67,7 +68,6 @@ impl GameSettings {
 		self.chkbox.addsub(CBSetting::BoldSafeOn, CBSetting::BoldFlg,String::from("SAFETY ON"), false);
 		self.chkbox.addsub(CBSetting::SafeOn,CBSetting::Inference, String::from("SAFETY ON"), false);
 		self.chkbox.addsub(CBSetting::DangOn,CBSetting::Inference, String::from("DANGER ON"), true);
-		self.chkbox.addsub(CBSetting::DispAll,CBSetting::Inference, String::from("All DISPLAY"), false);
 		self.chkbox.addsub(CBSetting::BelieveFlag,CBSetting::Inference, String::from("BELEVE FLAG"), false);
 		self.chkbox.addsub(CBSetting::HideLv1, CBSetting::HideOn,String::from("LEVEL1"), true);
 		self.chkbox.addsub(CBSetting::HideLv2, CBSetting::HideOn,String::from("LEVEL2"), false);
@@ -75,6 +75,9 @@ impl GameSettings {
 		self.chkbox.addsub(CBSetting::HideNumLv1, CBSetting::HideNumOn,String::from("LEVEL1"), true);
 		self.chkbox.addsub(CBSetting::HideNumLv2, CBSetting::HideNumOn,String::from("LEVEL2"), false);
 		self.chkbox.addsub(CBSetting::HideNumLv3, CBSetting::HideNumOn,String::from("LEVEL3"), false);
+
+		// 推論の全面表示は隠しておく
+		self.chkbox.set_active_flg(CBSetting::DispAll, false);
 
 		self.chkbox.view_hitbox(false);
 
@@ -147,7 +150,7 @@ impl GameSettings {
 
 		// チェックボックスのクリック処理
 		if let Some((kind, flg)) =
-			self.chkbox.click(self.mouse_pos.x, self.mouse_pos.y) {
+			self.chkbox.click(self.mouse_pos) {
 			match kind {
 
 				// 強調フラグが選択された場合
@@ -309,7 +312,7 @@ impl GameSettings {
 	//------------------------------
 	fn draw_help(&self, myfont:&Font) {
 		if let Some((_typ, help_lines)) =
-		   self.chkbox.gethelp(self.mouse_pos.x, self.mouse_pos.y) {
+		   self.chkbox.gethelp(self.mouse_pos) {
 			// ヘルプが設定されていない場合何もしない
 			if help_lines.len() == 0 {
 				return;

@@ -166,7 +166,7 @@ impl TitleMain {
 		}
 
 		// チェックボックスのクリック判定
-		if let Some((kind, _flg)) = self.chkbox.click(self.mouse_pos.x, self.mouse_pos.y) {
+		if let Some((kind, _flg)) = self.chkbox.click(self.mouse_pos) {
 			match kind {
 				// スタートが押された場合は何もせず真を返す
 				CBTitle::Start => {

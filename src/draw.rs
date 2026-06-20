@@ -10,8 +10,14 @@ pub fn clear_window(col: Color) {
 
 //--------------------------------------------------
 // 文字列描画
+// text＝文字列
+// pos_x＝表示位置（横）
+// pos_y＝表示位置（縦）
+// size＝フォントサイズ
+// fg＝文字色
+// bg＝文字縁色
 //--------------------------------------------------
-pub fn dr_text(text: &str, pos_x:f32, pos_y:f32, size: f32, fg:&String, bg:&String) {
+pub fn dr_text(text: &str, pos_x:f32, pos_y:f32, size: f32, fg:&str, bg:&str) {
 
 	let fgcol = mycol(fg);
 	let offs_y = size * 0.6;
@@ -35,13 +41,20 @@ pub fn dr_text(text: &str, pos_x:f32, pos_y:f32, size: f32, fg:&String, bg:&Stri
 
 //--------------------------------------------------
 // 文字列描画
+// text＝文字列
+// pos_x＝表示位置（横）
+// pos_y＝表示位置（縦）
+// size＝フォントサイズ
+// fg＝文字色
+// bg＝文字縁色
+// myfont＝フォントオブジェクト
 //--------------------------------------------------
 pub fn dr_text_ex(text: &str, pos_x:f32, pos_y:f32, size: f32, fg:&str, bg:&str, myfont: &Font) {
 	let fgcol = mycol(fg);
 	let offs_y = size * 1.0;
 
 	// 背景色の指定がある場合だけ縁取り処理
-	if &bg[6..8] != "00" {
+	if bg.len() > 0 && &bg[6..8] != "00" {
 		let bgcol = mycol(bg);
 
 		// フォント情報を作成
@@ -68,6 +81,16 @@ pub fn dr_text_ex(text: &str, pos_x:f32, pos_y:f32, size: f32, fg:&str, bg:&str,
 	draw_text_ex(text, pos_x, pos_y + offs_y, txt_params.clone());
 }
 
+//--------------------------------------------------
+// 矩形の描画
+// left＝左位置
+// top＝上位置
+// width＝幅
+// height＝高さ
+// tick＝輪郭幅（0.0指定で「なし」）
+// col＝塗りつぶし色
+// bcol＝輪郭色（tickで0.0を指定した場合参照されない）
+//--------------------------------------------------
 pub fn dr_rect(left:f32, top:f32, width:f32, height:f32, tick: f32, col:&str, bcol: &str) {
 	// 塗りつぶし色の指定がある場合だけ塗り潰し
 	if col.len() >= 8 && &col[6..8] != "00" {
@@ -79,6 +102,9 @@ pub fn dr_rect(left:f32, top:f32, width:f32, height:f32, tick: f32, col:&str, bc
 	}
 }
 
+//--------------------------------------------------
+// RRGGBBAA形式文字列をColor形式へ変換
+//--------------------------------------------------
 fn mycol(hex: &str) -> Color {
     let hex = hex.trim_start_matches('#');
     let r = u8::from_str_radix(&hex[0..2], 16).unwrap();

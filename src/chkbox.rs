@@ -69,14 +69,14 @@ impl<T> ChkBox<T>
 	//--------------------------------------------------
 	// チェックボックスをクリック
 	//--------------------------------------------------
-	pub fn click(&mut self,  mouse_x:f32, mouse_y: f32) -> bool {
+	pub fn click(&mut self,  mouse: PosTable) -> bool {
 		// チェックボックスが無効・またはロック中の場合はなにもしない
 		if !self.is_active || self.is_lock {
 			return false
 		}
 
 		// 当たり判定に合致していればクリック処理
-		if self.is_mouse_over(mouse_x, mouse_y) {
+		if self.is_mouse_over(mouse) {
 			self.flg ^= true;
 			true
 		} else {
@@ -87,7 +87,7 @@ impl<T> ChkBox<T>
 	//--------------------------------------------------
 	// マウスオーバー判定
 	//--------------------------------------------------
-	pub fn is_mouse_over(&self, mouse_x:f32, mouse_y: f32) -> bool {
+	pub fn is_mouse_over(&self, mouse: PosTable) -> bool {
 		// 無効化されている場合判定しない
 		if !self.is_active {
 			return false
@@ -99,27 +99,42 @@ impl<T> ChkBox<T>
 		let top = self.pos.y + self.offs.y;
 		let right = left + self.size.x;
 		let bottom = top + self.size.y - 10.0;
-		if mouse_x >= left && mouse_x <= right &&
-		   mouse_y >= top && mouse_y <= bottom {
+		if mouse.x >= left && mouse.x <= right &&
+		   mouse.y >= top && mouse.y <= bottom {
 			return true
 		}
 		false
 	}
 
 	//--------------------------------------------------
-	// 色の指定
+	// タイプを返却する
+	//--------------------------------------------------
+	pub fn get_type(&self) -> T {
+		self.mytype
+	}
+
+	//--------------------------------------------------
+	// 親のタイプを返却する
+	//--------------------------------------------------
+	pub fn get_parent(&self) -> Option<T> {
+		self.parent
+	}
+
+	//--------------------------------------------------
+	// 色の設定
 	//--------------------------------------------------
 	pub fn set_col(&mut self, fgcol: String, bgcol: String) {
 		if fgcol != "" {
-			self.fgcol = fgcol.to_string();
+			self.fgcol = fgcol;
 		}
 		if bgcol != "" {
-			self.bgcol = bgcol.to_string();
+			self.bgcol = bgcol;
 		}
 	}
 
 	//--------------------------------------------------
 	// ヘルプテキストの設定
+	// help_txt＝テキスト型の配列
 	//--------------------------------------------------
 	pub fn set_help(&mut self, help_txt: Vec<String>) {
 		self.help_txt = help_txt;
@@ -154,7 +169,7 @@ impl<T> ChkBox<T>
 	}
 
 	//--------------------------------------------------
-	// 上方向の余白を取得する
+	// オフセット（原点側の余白）を取得する
 	//--------------------------------------------------
 	pub fn get_offs(&self) -> PosTable {
 		self.offs
@@ -200,20 +215,6 @@ impl<T> ChkBox<T>
 	//--------------------------------------------------
 	pub fn view_box(&mut self, viewbox: bool)  {
 		self.viewbox = viewbox;
-	}
-
-	//--------------------------------------------------
-	// タイプを返却する
-	//--------------------------------------------------
-	pub fn get_type(&self) -> T {
-		self.mytype
-	}
-
-	//--------------------------------------------------
-	// 親のタイプを返却する
-	//--------------------------------------------------
-	pub fn get_parent(&self) -> Option<T> {
-		self.parent
 	}
 
 	//--------------------------------------------------

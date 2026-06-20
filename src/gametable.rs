@@ -28,6 +28,9 @@ pub struct GameTable {
 impl GameTable {
 	//------------------------------
 	// 初期化
+	// width＝盤面の幅
+	// height＝満面の高さ
+	// bom_num＝爆弾の数
 	//------------------------------
 	pub fn new(width:i32, height:i32, num_bom:i32) -> GameTable {
 		GameTable {

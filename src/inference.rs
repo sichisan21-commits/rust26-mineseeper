@@ -22,6 +22,9 @@ pub struct InfTable {						// 推論処理用データ
 impl InfTable {
 	//------------------------------
 	// 初期化
+	// table＝処理対象のテーブル（clone）
+	// width＝盤面の幅
+	// height＝盤面の高さ
 	//------------------------------
 	pub fn new(table:Vec<Panel>, width:i32, height:i32) -> InfTable {
 		InfTable {
@@ -42,7 +45,8 @@ impl InfTable {
 
 	//##################################################
 	// 【強調処理】
-	//  旗が立てられる可能性のあるマスの強調表示
+	// 旗が立てられる可能性のあるマスの強調表示
+	// is_safe_on＝安全マスの表示フラグ
 	//##################################################
 	pub fn set_bold(&mut self, is_safe_on:bool) {
 		// 一旦すべてのフラグを落とす
@@ -64,6 +68,8 @@ impl InfTable {
 
 	//------------------------------
 	// 指定マスの周囲９マスをチェックし、旗が立てられそうなら強調表示する
+	// is_safe_on＝安全マスの表示フラグ
+	// cursol_index＝カーソル位置の配列番号
 	//------------------------------
 	fn update_bold(&mut self, is_safe_on: bool, cursol_index:i32) {
 		// カーソルの周囲９マスをチェックする
@@ -118,111 +124,6 @@ impl InfTable {
 				self.table[index as usize].set_autoflag(AutoSts::Safety, self.believe_flg);
 			}
 		}
-	}
-
-	//##################################################
-	// 【危険マス・安全マス設定】
-	//##################################################
-	//------------------------------
-	// 自動的に判別し危険マス／安全マスにフラグを立てる
-	//------------------------------
-	pub fn inference(&mut self, _is_dang_on: bool, _is_safe_on: bool, believe_flg: bool) {
-		println!("exec inference");
-		// 全てのアシスト表示をオフ
-		for index in 0..(self.width*self.height) as usize {
-			self.table[index].bold_off();
-			self.table[index].set_autoflag(AutoSts::None, false);
-			self.table[index].set_infe_flg(false);
-		}
-
-		// 推論ループ（無限ループを考慮して最大１０回）
-		for _ in 0..10 {
-			let mut is_update = false;
-
-			// まず単純な推論を実施
-			for _ in 0..10 {
-				if !self.inf_simple() {
-					break;
-				}
-				is_update = true;
-			}
-
-			// 高度推論を行う
-			for _ in 0..10 {
-				if !self.inf_deep() {
-					break;
-				}
-				is_update = true;
-			}
-
-			// 更新がなければループを抜ける
-			if !is_update {
-				break;
-			}
-		}
-
-		// ユーザの立てた旗を信じないならここまで
-		if !believe_flg {
-			return
-		}
-
-		// ユーザの立てた旗を信じる
-		self.believe_flg = believe_flg;
-		for _ in 0..10 {
-			// まず単純な推論を実施
-			for _ in 0..10 {
-				if !self.inf_simple() {
-					break;
-				}
-			}
-
-			// 高度推論を行う
-			for _ in 0..10 {
-				let is_update = self.inf_deep();
-				if !is_update {
-					break;
-				}
-			}
-		}
-
-	}
- 
-	//------------------------------
-	// シンプルな危険・安全判定
-	//------------------------------
-	pub fn inf_simple(&mut self) -> bool {
-		let mut is_update = false;
-
-		// ユーザの立てた旗を信じる場合
-		if self.believe_flg {
-			// 旗の立っているマスは危険マスとする
-			for index in 0..self.width * self.height {
-				if self.table[index as usize].get_userflg() == UserFlg::RedFlg {
-					self.table[index as usize].set_autoflag(AutoSts::Danger, self.believe_flg);
-				}
-			}
-		}
-
-		// 危険マスを判定
-		for index in 0..self.width * self.height {
-			is_update |= self.flag_dangar_one(index);
-		}
-
-		// 安全マスを判定
-		for index in 0..self.width * self.height {
-			is_update |= self.flag_safety_one(index);
-		}
-
-		is_update
-	}
-	
-	//------------------------------
-	// 高度な危険・安全判定
-	//------------------------------
-	pub fn inf_deep(&mut self) -> bool {
-		self.infe.clear();
-		self.make_inference();
-		self.inference_check()
 	}
 
 	//------------------------------
@@ -317,6 +218,115 @@ impl InfTable {
 			}
 		}
 		is_update
+	}
+
+	//##################################################
+	// 【危険マス・安全マス設定】
+	//##################################################
+	//------------------------------
+	// 自動的に判別し危険マス／安全マスにフラグを立てる
+	// is_dang_on＝危険マスの表示フラグ
+	// is_safe_on＝安全マスの表示フラグ
+	// believe_flg＝ユーザの立てた旗を信じて推論を行うか
+	//------------------------------
+	pub fn inference(&mut self, _is_dang_on: bool, _is_safe_on: bool, believe_flg: bool) {
+		println!("exec inference");
+		// 全てのアシスト表示をオフ
+		for index in 0..(self.width*self.height) as usize {
+			self.table[index].bold_off();
+			self.table[index].set_autoflag(AutoSts::None, false);
+			self.table[index].set_infe_flg(false);
+		}
+
+		// 推論ループ（無限ループを考慮して最大１０回）
+		for _ in 0..10 {
+			let mut is_update = false;
+
+			// まず単純な推論を実施
+			for _ in 0..10 {
+				if !self.inf_simple() {
+					break;
+				}
+				is_update = true;
+			}
+
+			// 高度推論を行う
+			for _ in 0..10 {
+				if !self.inf_deep() {
+					break;
+				}
+				is_update = true;
+			}
+
+			// 更新がなければループを抜ける
+			if !is_update {
+				break;
+			}
+		}
+
+		// ユーザの立てた旗を信じないならここまで
+		if !believe_flg {
+			return
+		}
+
+		// ユーザの立てた旗を信じる
+		self.believe_flg = believe_flg;
+		for _ in 0..10 {
+			// まず単純な推論を実施
+			for _ in 0..10 {
+				if !self.inf_simple() {
+					break;
+				}
+			}
+
+			// 高度推論を行う
+			for _ in 0..10 {
+				let is_update = self.inf_deep();
+				if !is_update {
+					break;
+				}
+			}
+		}
+
+	}
+ 
+	//------------------------------
+	// シンプルな危険・安全判定
+	// 単一マスから危険・安全を判断
+	//------------------------------
+	pub fn inf_simple(&mut self) -> bool {
+		let mut is_update = false;
+
+		// ユーザの立てた旗を信じる場合
+		if self.believe_flg {
+			// 旗の立っているマスは危険マスとする
+			for index in 0..self.width * self.height {
+				if self.table[index as usize].get_userflg() == UserFlg::RedFlg {
+					self.table[index as usize].set_autoflag(AutoSts::Danger, self.believe_flg);
+				}
+			}
+		}
+
+		// 危険マスを判定
+		for index in 0..self.width * self.height {
+			is_update |= self.flag_dangar_one(index);
+		}
+
+		// 安全マスを判定
+		for index in 0..self.width * self.height {
+			is_update |= self.flag_safety_one(index);
+		}
+
+		is_update
+	}
+	
+	//------------------------------
+	// 高度な危険・安全判定
+	//------------------------------
+	pub fn inf_deep(&mut self) -> bool {
+		self.infe.clear();
+		self.make_inference();
+		self.inference_check()
 	}
 
 	//##################################################
@@ -489,7 +499,6 @@ impl InfTable {
 					}
 				}
 			}
-//			break;
 		}
 
 		is_update

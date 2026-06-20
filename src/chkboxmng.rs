@@ -40,6 +40,13 @@ impl<T> ChkBoxMng<T>
 
 	//--------------------------------------------------
 	// チェックボックスの基本情報設定
+	// left＝左座標
+	// top＝上座標
+	// width＝幅
+	// height＝高さ
+	// fsize＝フォントサイズ
+	// fgcol＝文字色（RRGGBBAA形式文字列）
+	// bgcol＝文字縁色（RRGGBBAA形式文字列）
 	//--------------------------------------------------
 	pub fn set_base(&mut self, left: f32, top: f32, width: f32, height: f32, fsize: f32, fgcol:&str, bgcol:&str) {
 		self.pos = PosTable{x: left, y: top};
@@ -124,6 +131,7 @@ impl<T> ChkBoxMng<T>
 
 	//--------------------------------------------------
 	// 次のチェックボックスの絶対座標を設定（１回限り）
+	// 本関数で指定した値は次に追加するチェックボックスに反映される
 	//--------------------------------------------------
 	pub fn set_next_pos(&mut self, pos:PosTable) {
 		self.nextpos.x = pos.x + self.pos.x;
@@ -132,6 +140,7 @@ impl<T> ChkBoxMng<T>
 
 	//--------------------------------------------------
 	// 次のチェックボックスのオフセットを設定（１回限り）
+	// 本関数で指定した値は次に追加するチェックボックスに反映される
 	//--------------------------------------------------
 	pub fn _set_next_offs(&mut self, offs:PosTable) {
 		self.nextoffs = offs;
@@ -195,7 +204,7 @@ impl<T> ChkBoxMng<T>
 	}
 
 	//------------------------------
-	// チェックボックスのチェックマークオン／オフ
+	// チェックボックスの当たり判定表示オン／オフ
 	//------------------------------
 	pub fn view_hitbox(&mut self, flg: bool) {
 		for chkbox in &mut self.chkboxs {
@@ -245,7 +254,7 @@ impl<T> ChkBoxMng<T>
 	//------------------------------
 	// チェックボックスの有効無効変更
 	//------------------------------
-	pub fn _set_active_flg(&mut self, mytype: T, flg: bool) {
+	pub fn set_active_flg(&mut self, mytype: T, flg: bool) {
 		for chkbox in &mut self.chkboxs {
 			if chkbox.get_type() == mytype {
 				chkbox.set_active_flg(flg);
@@ -306,11 +315,11 @@ impl<T> ChkBoxMng<T>
 	//------------------------------
 	// クリック判定
 	//------------------------------
-	pub fn click(&mut self, mouse_x: f32, mouse_y: f32) -> Option<(T, bool)> {
+	pub fn click(&mut self, mouse:PosTable) -> Option<(T, bool)> {
 		// 全てのチェックボックスのクリック判定
 		for parent in 0..self.chkboxs.len() {
 			// 対象のチェックボックスがクリックされた
-			if self.chkboxs[parent].click(mouse_x, mouse_y) {
+			if self.chkboxs[parent].click(mouse) {
 				// 子のチェックボックスへ連携
 				self.child_onoff(parent);
 				// クリック判定された場合タイプとフラグを返却
@@ -323,11 +332,11 @@ impl<T> ChkBoxMng<T>
 	//------------------------------
 	// マウスオーバーしているチェックボックスのヘルプを取得する
 	//------------------------------
-	pub fn gethelp(&self, mouse_x: f32, mouse_y: f32) -> Option<(T, &[String])> {
+	pub fn gethelp(&self, mouse:PosTable) -> Option<(T, &[String])> {
 		// 全てのチェックボックスのクリック判定
 		for parent in 0..self.chkboxs.len() {
 			// マウスオーバーを判定する
-			if self.chkboxs[parent].is_mouse_over(mouse_x, mouse_y) {
+			if self.chkboxs[parent].is_mouse_over(mouse) {
 				// クリック判定された場合タイプとフラグを返却
 				return Some((self.chkboxs[parent].get_type(), self.chkboxs[parent].get_help()));
 			}

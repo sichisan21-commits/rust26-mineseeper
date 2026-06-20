@@ -77,29 +77,37 @@ impl GameMain {
 			setting: None,
 		};
 
-		// チェックボックス作成
-        gm.chkbox.set_base(30.0,200.0,110.0, 40.0, 25.0,"000000FF", "000077FF");
-		// リセットボタン作成
-		gm.chkbox.add(CBGame::Reset, String::from("[ RESET ]"), false);
-		gm.chkbox.set_col(CBGame::Reset, "FFFF77FF","");
-		gm.chkbox.view_box(CBGame::Reset, false);
-		// 設定ボタン作成
-		gm.chkbox.add(CBGame::Settings, String::from("[SETTING]"), false);
-		gm.chkbox.set_col(CBGame::Settings, "77FFFFFF","");
-		gm.chkbox.view_box(CBGame::Settings, false);
-		// タイトルへ戻るボタン作成
-		gm.chkbox.add(CBGame::Title, String::from("[ TITLE ]"), false);
-		gm.chkbox.set_col(CBGame::Title, "FF7777FF","");
-		gm.chkbox.view_box(CBGame::Title, false);
-		// 操作方法
-		gm.chkbox.add(CBGame::HowTo, String::from("[HOW TO ]"), false);
-		gm.chkbox.set_col(CBGame::HowTo, "FFFFFFFF","");
-		gm.chkbox.view_box(CBGame::HowTo, false);
-
-		gm.chkbox.view_hitbox(false);
+		gm.mk_chkbox();
 
 		// 情報を返却
 		gm
+	}
+
+
+	//------------------------------
+	// チェックボックスを作成する
+	//------------------------------
+	fn mk_chkbox(&mut self) {
+		// チェックボックス作成
+        self.chkbox.set_base(30.0,200.0,110.0, 40.0, 25.0,"000000FF", "000077FF");
+		// リセットボタン作成
+		self.chkbox.add(CBGame::Reset, String::from("[ RESET ]"), false);
+		self.chkbox.set_col(CBGame::Reset, "FFFF77FF","");
+		self.chkbox.view_box(CBGame::Reset, false);
+		// 設定ボタン作成
+		self.chkbox.add(CBGame::Settings, String::from("[SETTING]"), false);
+		self.chkbox.set_col(CBGame::Settings, "77FFFFFF","");
+		self.chkbox.view_box(CBGame::Settings, false);
+		// タイトルへ戻るボタン作成
+		self.chkbox.add(CBGame::Title, String::from("[ TITLE ]"), false);
+		self.chkbox.set_col(CBGame::Title, "FF7777FF","");
+		self.chkbox.view_box(CBGame::Title, false);
+		// 操作方法
+		self.chkbox.add(CBGame::HowTo, String::from("[HOW TO ]"), false);
+		self.chkbox.set_col(CBGame::HowTo, "FFFFFFFF","");
+		self.chkbox.view_box(CBGame::HowTo, false);
+		// 値判定表示の指定
+		self.chkbox.view_hitbox(false);
 	}
 
 	//----------------------------------------
@@ -111,6 +119,9 @@ impl GameMain {
 
 	//------------------------------
 	// ゲームの情報の設定
+	// width＝盤面の幅
+	// height＝満面の高さ
+	// bom_num＝爆弾の数
 	//------------------------------
 	pub fn set_gameinfo(&mut self, width: i32, height: i32, bom_num: i32) {
 		self.tb.width = width;
@@ -670,7 +681,7 @@ impl GameMain {
 
 		// チェックボックスのクリック処理
 		if let Some((kind, _)) =
-			self.chkbox.click(self.mouse.pos.x, self.mouse.pos.y) {
+			self.chkbox.click(self.mouse.pos) {
 			match kind {
 				// 設定ボタンなら設定画面を開く
 				CBGame::Settings => {
@@ -715,9 +726,14 @@ impl GameMain {
 			hidenum_lv = 3;
 		}
 
+		//--------------------------------------------------
 		// 盤面描画
+		//--------------------------------------------------
 		self.draw_table(hide_lv, hidenum_lv);
 
+		//--------------------------------------------------
+		// メニュー描画
+		//--------------------------------------------------
 		// メニュー範囲を塗りつぶす
 		dr_rect(0.0, 0.0, self.screen.x, WALL_TOP - 20.0,
 			0.0, MENU_COLOR, "");
@@ -757,10 +773,14 @@ impl GameMain {
 			};
 		dr_text(text, 10.0, 130.0, FONT_SIZE * 1.4, &fg, &bg);
 
-		// チェックボックスを表示する
+		//--------------------------------------------------
+		// チェックボックス描画
+		//--------------------------------------------------
 		self.chkbox.draw(myfont);
 	
-		// 経過時間を表示
+		//--------------------------------------------------
+		// 経過時間を描画
+		//--------------------------------------------------
 		let ((timestr, msec),fg) =
 			if self.stat == GameStat::Ready {
 				// ゲームが始まってなければ灰色表示
@@ -783,7 +803,9 @@ impl GameMain {
 			130.0,WALL_TOP + 20.0, FONT_SIZE_BIG * 0.5,
 			&fg, &String::from("000000FF"));
 
+		//--------------------------------------------------
 		// HIDE レベルの表示
+		//--------------------------------------------------
 		let left = 0.0;
 		let top = 370.0;
 		let mut text = "";
@@ -807,7 +829,9 @@ impl GameMain {
 		dr_text(text, left + 20.0, top + 30.0, FONT_SIZE,
 			&String::from("FF0000FF"), &String::from("000000FF"));
 
+		//--------------------------------------------------
 		// 死んだ回数を表示
+		//--------------------------------------------------
 		self.draw_death_cnt();
 /*
 			// デバッグ
@@ -823,10 +847,14 @@ impl GameMain {
 		pos_y += font_offs;dr_text_ex(&format!("TIME:{}",get_time()),
 			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",myfont);
 */
+		//--------------------------------------------------
 		// 設定画面表示
+		//--------------------------------------------------
 		self.setting.as_ref().unwrap().borrow().draw(myfont);
 
+		//--------------------------------------------------
 		// 操作方法の表示
+		//--------------------------------------------------
 		if self.chkbox.get_flg(CBGame::HowTo) {
 			self.draw_howto(myfont);
 		}
@@ -953,7 +981,6 @@ impl GameMain {
 				}
 			}
 		}
-
 	}
 }
 
