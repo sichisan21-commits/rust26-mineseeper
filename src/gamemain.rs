@@ -483,6 +483,7 @@ impl GameMain {
 				}
 				self.tb.table.table_undo();
 				self.assist();
+				// 死んでたら復活させる
 				self.stat = GameStat::Playing;
 				return is_update;
 			}
@@ -833,7 +834,7 @@ impl GameMain {
 	}
 
 	//------------------------------
-	// 盤面の描画
+	// 操作方法のの描画
 	//------------------------------
 	fn draw_howto(&self, myfont: &Font) {
 		let left = 20.0;
