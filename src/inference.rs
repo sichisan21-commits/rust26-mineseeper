@@ -1,5 +1,6 @@
 use crate::panel::Panel;
 use crate::myconst::*;
+use std::collections::HashSet;
 
 // 推論テーブル
 struct Inference {
@@ -127,31 +128,42 @@ impl InfTable {
 	// 自動的に判別し危険マス／安全マスにフラグを立てる
 	//------------------------------
 	pub fn inference(&mut self, _is_dang_on: bool, _is_safe_on: bool, believe_flg: bool) {
-		println!("infeMain-----------");
-		println!("-------------------");
-
 		// 全てのアシスト表示をオフ
 		for index in 0..(self.width*self.height) as usize {
 			self.table[index].bold_off();
 			self.table[index].set_autoflag(AutoSts::None, false);
+			self.table[index].set_infe_flg(false);
 		}
 
 		// 推論ループ（無限ループを考慮して最大１０回）
 		for _ in 0..10 {
+			let mut is_update = false;
+
 			// まず単純な推論を実施
 			for _ in 0..10 {
 				if !self.inf_simple() {
 					break;
 				}
+				is_update = true;
 			}
 
 			// 高度推論を行う
 			for _ in 0..10 {
-				let is_update = self.inf_deep();
-				if !is_update {
+				if !self.inf_deep() {
 					break;
 				}
+				is_update = true;
 			}
+
+			// 更新がなければループを抜ける
+			if !is_update {
+				break;
+			}
+		}
+
+		// ユーザの立てた旗を信じないならここまで
+		if !believe_flg {
+			return
 		}
 
 		// ユーザの立てた旗を信じる
@@ -383,7 +395,9 @@ impl InfTable {
 	fn inference_one(&mut self, cursol_index: i32) -> bool {
 		let mut is_update = false;
 
+		//--------------------------------------------------
 		// 周囲９マスの中から、未確定のマスだけリスト化する
+		//--------------------------------------------------
 		let around = self.table[cursol_index as usize].get_around_tbl();
 		let mut around_num = self.table[cursol_index as usize].get_around_num();
 		let mut myclose_index:Vec<i32> = Vec::new();
@@ -412,20 +426,16 @@ impl InfTable {
 			return is_update;
 		}
 
+		//--------------------------------------------------
 		// 推論テーブルでループする
+		//--------------------------------------------------
 		for inference in &self.infe {
 			// 自分自身とは比較しない
 			if inference.myindex == cursol_index {
 				continue;
 			}
-
-			// 推論テーブルのマスが現在の周囲９マスに含まれるか
-			// 含まれなければスキップ
-			if !inference.index.iter().all(|idx| myclose_index.contains(idx)) {
-				continue;
-			}
-
-			// myclose_index から inference.index を除いた残りを作る
+			
+			// 周囲の未確定パネルから、推論テーブルと一致するマスを除いた残りを作る
 			let remain: Vec<i32> = myclose_index
 				.iter()
 				.cloned()
@@ -435,20 +445,51 @@ impl InfTable {
 				continue;
 			}
 
+			// その結果未確定パネルが残らなかった、またはまったく掠っていなかった（離れている）
+			// ならスキップ
+			let remain_len = remain.len();
+			if remain_len == 0 || remain_len == myclose_index.len(){
+				continue;
+			}
+
+			// 未確定パネルと推論テーブルの重複数を求める
+			let overnum = (myclose_index.len() - remain_len) as i32;
+			// 重複しなかった数を求める
+			let outnum = inference.index.len() as i32 - overnum;
+			// 重複内に必ず含まれる爆弾数を求める
+			let inf_bommin = inference.bomnum - outnum;
+/*
+			println!("座標が一致した:{}({}/{}),{}({}/{}),outnum={}",
+				cursol_index,around_num,myclose_index.len(),
+				inference.myindex,inference.bomnum,inference.index.len(),
+				outnum);
+ */
+
 			// 残爆弾数が一致した場合、重複していないマスは安全
-			if around_num == inference.bomnum {
-				is_update = true;
-				for index in remain  {
-					self.table[index as usize].set_autoflag(AutoSts::Safety, self.believe_flg);
-				}
-			} else if around_num - inference.bomnum == remain.len() as i32 {
-				// 残ったマスの数と差し引き爆弾数が同じ場合は危険
+			if around_num == inf_bommin {
 				is_update = true;
 				for index in remain {
+					self.table[index as usize].set_autoflag(AutoSts::Safety, self.believe_flg);
+					self.table[index as usize].set_infe_flg(true);
+					if self.table[index as usize].is_bom() {
+						println!("安全ではないマスを安全と判定した={}", index);
+					}
+				}
+			} else if outnum == 0 && around_num - inference.bomnum == remain.len() as i32 {
+				// 推論テーブルがカーソルの周囲に完全一致しており（outnum == 0）
+				// 残ったマスの数と差し引き爆弾数が同じ場合は危険
+				is_update = true;
+				let remain_len = remain.len();
+				for index in remain {
 					self.table[index as usize].set_autoflag(AutoSts::Danger, self.believe_flg);
+					self.table[index as usize].set_infe_flg(true);
+					if !self.table[index as usize].is_bom() {
+						println!("危険ではないマスを危険と判定した:{},around={},tgt={},infbom={},remainlen={}",
+							cursol_index, around_num, index, inference.bomnum, remain_len);
+					}
 				}
 			}
-			break;
+//			break;
 		}
 
 		is_update

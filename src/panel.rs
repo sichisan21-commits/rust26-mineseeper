@@ -14,11 +14,12 @@ pub struct Panel {
 	is_open: bool,                          // 開いているか
 	is_bom: bool,                           // 爆弾有無
 	is_bold: bool,                          // 太字表示
-	auto_flg: AutoSts,                      // 自動判定フラグ
-	believe_flg: bool,                      // この自動判定がユーザの旗を信じて立てたものか
 	userflg: UserFlg,                       // ユーザの立てた旗
 	around_tbl: [[i32; 3];3],               // カーソル周囲９マスのテーブル位置
 	around_num: i32,                        // 周りの爆弾数
+	auto_flg: AutoSts,                      // 自動判定フラグ
+	believe_flg: bool,                      // この自動判定がユーザの旗を信じて立てたものか
+	infe_flg: bool,							// この自動判定が高度推論で立てたものか
 }
 
 // 実装
@@ -37,9 +38,10 @@ impl Panel {
 			is_bold: false,
 			userflg: UserFlg::None,
 			around_num: 0,
+			around_tbl: [[-1;3];3],
 			auto_flg: AutoSts::None,
 			believe_flg: false,
-			around_tbl: [[-1;3];3],
+			infe_flg: false,
 		};
 
 		// 周囲のインデックスを求める
@@ -145,6 +147,13 @@ impl Panel {
 	}
 
 	//------------------------------
+	// 高度推論で立てた自動判定フラグ
+	//------------------------------
+	pub fn set_infe_flg(&mut self, flg: bool) {
+		self.infe_flg = flg
+	}
+
+	//------------------------------
 	// 強調表示オン
 	//------------------------------
 	pub fn bold_on(&mut self) {
@@ -244,8 +253,9 @@ impl Panel {
 				fgcol = "333333AA";
 			}
 			dr_rect(left,top, PANEL_WIDTH, PANEL_HEIGHT, 3.0, fgcol, "777777FF");
+			// 旗は再度描画する
 			if self.userflg != UserFlg::None {
-				self.draw_text_close(left, top, is_cursol_around);
+				self.draw_text_close(left, top, is_cursol_around, is_dangon, is_safeon);
 			}
 		}
 	}
@@ -277,7 +287,7 @@ impl Panel {
 		   0.0, panelcolor, "");
 
 		// パネルの文字を描く
-		self.draw_text_close(left, top, is_cursol_around);
+		self.draw_text_close(left, top, is_cursol_around, is_dangon, is_safeon);
 	}
 
 	//------------------------------
@@ -345,7 +355,7 @@ impl Panel {
 	 //------------------------------
 	// パネルの文字を描画（閉じている）
 	//------------------------------
-	fn draw_text_close(&self, left: f32, top:f32, _is_cursol_around: bool) {
+	fn draw_text_close(&self, left: f32, top:f32, is_cursol_around: bool, is_dangon: bool, is_safeon: bool) {
 		// 開いていればなにもしない
 		if self.is_open {
 			return
@@ -362,11 +372,38 @@ impl Panel {
 			draw_text("F", left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, BLACK);
 			draw_text("F", left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, flag_col);
 			draw_text("F", left + PANEL_FONT_OFFSX - 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, flag_col);
-		} else if self.believe_flg {
-			// ユーザの旗を信じて判断したパネルなら「？」表示を付与する
+		}
+
+		if !is_cursol_around {
+			return
+		}
+
+		//--------------------------------------------------
+		// 以降カーソル周辺のみ表示
+		//--------------------------------------------------
+		let mut is_unknown = false;
+
+		// アシスト使用中で未確定か判定
+		if is_dangon || is_safeon {
+			if self.auto_flg == AutoSts::None ||
+			   (!is_dangon && self.auto_flg == AutoSts::Danger) ||
+			   (!is_safeon && self.auto_flg == AutoSts::Safety) {
+				is_unknown = true;
+			}
+		}
+
+		// ユーザの旗を信じて判断したパネルまたは
+		// アシスト使用中で未確定パネルなら「？」表示する
+		if self.believe_flg || is_unknown {
 			draw_text("?", left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, GRAY);
 			draw_text("?", left + PANEL_FONT_OFFSX, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, GRAY);
 		}
+/*
+		} else if self.infe_flg {
+			// 高度推論で判断したパネルなら「！」表示を付与する
+			draw_text("!", left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, GRAY);
+			draw_text("!", left + PANEL_FONT_OFFSX, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, GRAY);
+ */
 	}
 }
 
