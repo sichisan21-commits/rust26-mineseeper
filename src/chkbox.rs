@@ -1,3 +1,4 @@
+// 自作チェックボックス
 use macroquad::prelude::*;
 use crate::utils::*;
 use crate::draw::*;
@@ -5,17 +6,17 @@ use crate::draw::*;
 pub struct ChkBox<T>{
 	is_active: bool,							// 有効／無効
 	is_lock: bool,								// 変更不可（値は有効）
-	mytype: T,									// チェックボックスのタイプ
-	parent: Option<T>,							// 親となるチェックボックス
+	mytype: T,									// チェックボックスのタイプ（上位が識別するためのenumm）
+	parent: Option<T>,							// 親となるチェックボックスのタイプ（＝mytype）
 	text: String,								// 表示文字列
 	flg: bool,									// チェックの状態
-	is_absolute: bool,							// 絶対座標か相対座標か
-	pos: PosTable,								// 実座標
-	size: PosTable,								// 当たり判定のサイズ
-	offs: PosTable,								// オフセット
 	fsize: f32,									// フォントサイズ
 	fgcol: String,								// 前面色
 	bgcol: String,								// 輪郭色
+	is_absolute: bool,							// 絶対座標か相対座標か
+	pos: PosTable,								// 実座標
+	size: PosTable,								// 当たり判定
+	offs: PosTable,								// オフセット
 	viewbox: bool,								// [*] の表示有無
 	hitbox: bool,								// 当たり判定表示
 	help_txt: Vec<String>,						// 説明文
@@ -28,8 +29,23 @@ impl<T> ChkBox<T>
 	where
 		T: Copy + PartialEq,
 	{
+
+	//--------------------------------------------------
+	// 初期化
+	// mytype＝チェックボックスを識別するタイプ（上位が指定するenum）
+	// parent＝親のタイプ（＝mytype）
+	// is_active＝有効／無効
+	// text＝表示テキスト
+	// fsize＝フォントサイズ
+	// flg＝チェックのオンオフ
+	// pos＝チェックボックスの位置
+	// is_absolute＝絶対座標か否か
+	// offs＝オフセット（相対座標の場合）
+	// size＝大きさ（当たり判定）
+	// fgcol＝文字の色（RRGGBBAA形式のテキスト）
+	// bgcol＝文字の縁の色（RRGGBBAA形式のテキスト）
+	//--------------------------------------------------
 	pub fn new(mytype:T, parent:Option<T>, is_active: bool, text:String, fsize:f32, flg: bool, pos:PosTable, is_absolute:bool, offs:PosTable,size:PosTable, fgcol:String, bgcol:String) -> ChkBox<T> {
-		// チェックボックスの座標を決める
 		ChkBox {
 			is_active,
 			is_lock: false,
@@ -51,6 +67,24 @@ impl<T> ChkBox<T>
 	}
 	
 	//--------------------------------------------------
+	// チェックボックスをクリック
+	//--------------------------------------------------
+	pub fn click(&mut self,  mouse_x:f32, mouse_y: f32) -> bool {
+		// チェックボックスが無効・またはロック中の場合はなにもしない
+		if !self.is_active || self.is_lock {
+			return false
+		}
+
+		// 当たり判定に合致していればクリック処理
+		if self.is_mouse_over(mouse_x, mouse_y) {
+			self.flg ^= true;
+			true
+		} else {
+			false
+		}
+	}
+
+	//--------------------------------------------------
 	// マウスオーバー判定
 	//--------------------------------------------------
 	pub fn is_mouse_over(&self, mouse_x:f32, mouse_y: f32) -> bool {
@@ -58,6 +92,9 @@ impl<T> ChkBox<T>
 		if !self.is_active {
 			return false
 		}
+
+		// 当たり判定の算出
+		// フォントサイズと表示に乖離があるので判定を 10.0 小さくしている
 		let left = self.pos.x + self.offs.x;
 		let top = self.pos.y + self.offs.y;
 		let right = left + self.size.x;
@@ -70,16 +107,7 @@ impl<T> ChkBox<T>
 	}
 
 	//--------------------------------------------------
-	// チェックボックスをクリック
-	//--------------------------------------------------
-	pub fn click(&mut self) {
-		if self.is_active && !self.is_lock {
-			self.flg ^= true;
-		}
-	}
-
-	//--------------------------------------------------
-	// 色の設定
+	// 色の指定
 	//--------------------------------------------------
 	pub fn set_col(&mut self, fgcol: String, bgcol: String) {
 		if fgcol != "" {
@@ -91,7 +119,7 @@ impl<T> ChkBox<T>
 	}
 
 	//--------------------------------------------------
-	// 色の設定
+	// ヘルプテキストの設定
 	//--------------------------------------------------
 	pub fn set_help(&mut self, help_txt: Vec<String>) {
 		self.help_txt = help_txt;
@@ -119,21 +147,14 @@ impl<T> ChkBox<T>
 	}
 
 	//--------------------------------------------------
-	// 絶対座標指定かどうか
+	// 絶対座標指定かどうか返却
 	//--------------------------------------------------
 	pub fn is_absolute(&self) -> bool {
 		self.is_absolute
 	}
 
 	//--------------------------------------------------
-	// 上方向の余白を設定する
-	//--------------------------------------------------
-	pub fn set_offs(&mut self, offs: PosTable)  {
-		self.offs = offs;
-	}
-
-	//--------------------------------------------------
-	// 上方向の余白を設定する
+	// 上方向の余白を取得する
 	//--------------------------------------------------
 	pub fn get_offs(&self) -> PosTable {
 		self.offs
@@ -161,7 +182,7 @@ impl<T> ChkBox<T>
 	}
 
 	//--------------------------------------------------
-	// 有効無効を設定する
+	// 変更の許可を設定する
 	//--------------------------------------------------
 	pub fn set_lock_flg(&mut self, flg: bool)  {
 		self.is_lock = flg;
@@ -175,7 +196,7 @@ impl<T> ChkBox<T>
 	}
 
 	//--------------------------------------------------
-	// タイプを返却する
+	// チェック部分（[*]）の表示・非表示設定
 	//--------------------------------------------------
 	pub fn view_box(&mut self, viewbox: bool)  {
 		self.viewbox = viewbox;
@@ -196,7 +217,7 @@ impl<T> ChkBox<T>
 	}
 
 	//--------------------------------------------------
-	// フラグを返却する
+	// チェックボックスのフラグを返却する
 	//--------------------------------------------------
 	pub fn get_flg(&self) -> bool {
 		// 無効の場合「偽」を返す
@@ -207,7 +228,7 @@ impl<T> ChkBox<T>
 	}
 
 	//--------------------------------------------------
-	// フラグを返却する
+	// チェックボックスのフラグを設定する
 	//--------------------------------------------------
 	pub fn set_flg(&mut self, flg: bool) {
 		if self.is_active && !self.is_lock {
@@ -224,7 +245,7 @@ impl<T> ChkBox<T>
 			return
 		}
 
-		// チェック表示あり
+		// チェック表示ありなら文字列を作る
 		let check = {
 			if !self.viewbox {
 				""

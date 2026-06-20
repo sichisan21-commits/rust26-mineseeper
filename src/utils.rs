@@ -3,7 +3,7 @@ use macroquad::miniquad::window;
 use crate::myconst::*;
 
 // 座標データ
-#[derive(Debug,Copy,Clone)]
+#[derive(Debug,Copy,Clone,Default)]
 pub struct PosTable {
 	pub x: f32,
 	pub y: f32,

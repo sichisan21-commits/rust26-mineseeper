@@ -91,6 +91,11 @@ impl GameMain {
 		gm.chkbox.add(CBGame::Title, String::from("[ TITLE ]"), false);
 		gm.chkbox.set_col(CBGame::Title, "FF7777FF","");
 		gm.chkbox.view_box(CBGame::Title, false);
+		// 操作方法
+		gm.chkbox.add(CBGame::HowTo, String::from("[HOW TO ]"), false);
+		gm.chkbox.set_col(CBGame::HowTo, "FFFFFFFF","");
+		gm.chkbox.view_box(CBGame::HowTo, false);
+
 		gm.chkbox.view_hitbox(false);
 
 		// 情報を返却
@@ -146,7 +151,7 @@ impl GameMain {
 		// 事前処理
 		//--------------------------------------------------
 		// 戻り値を初期化
-		let mut ret_code = GameMode::Game;
+		let ret_code = GameMode::Game;
 
 		//更新有無を初期化
 		let mut is_update = false;
@@ -163,7 +168,7 @@ impl GameMain {
 		}
 
 		//--------------------------------------------------
-		// 設定画面処理
+		// 設定画面処理（表示中なら）
 		//--------------------------------------------------
 		if self.setting.as_ref().unwrap().borrow().is_open() {
 			self.setting_control();
@@ -172,6 +177,18 @@ impl GameMain {
 				return ret_code
 			}
 			is_update = true;
+		}
+
+		//--------------------------------------------------
+		// 操作説明画面処理（表示中なら）
+		//--------------------------------------------------
+		if self.chkbox.get_flg(CBGame::HowTo) {
+			// 左クリックされたら閉じる
+			if self.mouse.lefton_now {
+				self.chkbox.set_flg(CBGame::HowTo, false);
+				self.mouse_click_clear();
+			}
+			return ret_code
 		}
 
 		//--------------------------------------------------
@@ -238,7 +255,7 @@ impl GameMain {
 			self.mouse_click_clear();
 			self.death_cnt += 1;
 		} else {
-			// アシスト機能
+			// アシスト機能を実施
 			self.assist();
 		}
 
@@ -262,7 +279,7 @@ impl GameMain {
 		}
 
 		//--------------------------------------------------
-		// 以降、設定画面を抜けたときの処理
+		// 以降、設定画面を閉じられたときの処理
 		//--------------------------------------------------
 		// 青旗がオフになっているなら青旗をクリアする
 		if !self.get_chkbox_flg(CBSetting::UseBlueFlg) {
@@ -352,11 +369,13 @@ impl GameMain {
 		let edit_table = self.tb.table.tbl_backup();
 		let mut inftbl = InfTable::new(edit_table,self.tb.width, self.tb.height);
 
-	    // 太字処理か推論処理かでフラグ処理
+	    // 太字処理か推論処理かで処理
 		if bold_flg {
+			// 強調表示
 			let safe_on = self.get_chkbox_flg(CBSetting::BoldSafeOn);
 			inftbl.set_bold(safe_on);
 		} else {
+			// 推論処理
 			let safe_on = self.get_chkbox_flg(CBSetting::SafeOn);
 			let dang_on = self.get_chkbox_flg(CBSetting::DangOn);
 			let believe_flg = self.get_chkbox_flg(CBSetting::BelieveFlag);
@@ -463,6 +482,7 @@ impl GameMain {
 					self.tb.table.table_undo();
 				}
 				self.tb.table.table_undo();
+				self.assist();
 				self.stat = GameStat::Playing;
 				return is_update;
 			}
@@ -470,6 +490,7 @@ impl GameMain {
 			// 右キーで REDO
 			if is_key_pressed(KeyCode::Right) {
 				self.tb.table.table_redo();
+				self.assist();
 				return is_update;
 			}
 		}
@@ -580,7 +601,7 @@ impl GameMain {
 		}
 
 		//--------------------------------------------------
-		// クリックしたことを盤面に伝える
+		// ゲームプレイ中：クリックしたことを盤面に伝える
 		//--------------------------------------------------
 		if self.stat != GameStat::Playing {
 			return is_update;
@@ -763,7 +784,7 @@ impl GameMain {
 
 		// HIDE レベルの表示
 		let left = 0.0;
-		let top = 330.0;
+		let top = 370.0;
 		let mut text = "";
 		if hide_lv > 0 || hidenum_lv > 0 {
 			dr_rect(left, top, WALL_LEFT -30.0, 60.0, 0.0, "FF000055", "");
@@ -803,6 +824,59 @@ impl GameMain {
 */
 		// 設定画面表示
 		self.setting.as_ref().unwrap().borrow().draw(myfont);
+
+		// 操作方法の表示
+		if self.chkbox.get_flg(CBGame::HowTo) {
+			self.draw_howto(myfont);
+		}
+
+	}
+
+	//------------------------------
+	// 盤面の描画
+	//------------------------------
+	fn draw_howto(&self, myfont: &Font) {
+		let left = 20.0;
+		let top = 20.0;
+		let font_size = 20.0;
+		let offs = 30.0;
+		dr_rect(left, top, 750.0, 490.0, 3.0, "000000CC", "FF0000FF");
+
+		// 操作方法
+		let mut pos_y = top - offs;
+		pos_y += offs; dr_text_ex("＝ルール＝", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += offs; dr_text_ex("表示されているテーブルには爆弾が埋まっています。マウスクリックで爆弾の", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += offs; dr_text_ex("「埋まっていない」マスをすべて開けてください。", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += 20.0;
+		pos_y += offs; dr_text_ex("表示された数字はその周囲の「爆弾の数」です。例えば「１」であった場合、", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += offs; dr_text_ex("隣接するマスに「１つ」だけ爆弾が存在します。", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += 20.0;
+		pos_y += offs; dr_text_ex("＝操作方法＝", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += offs; dr_text_ex("左クリック：パネルを開ける。", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += offs; dr_text_ex("右クリック：旗(F)を立てる、旗を外す。", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += offs; dr_text_ex("上下キー：画面倍率変更。", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += offs; dr_text_ex("左右キー：やり直し／元に戻す。（UNDO有効時）", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += 20.0;
+		pos_y += offs; dr_text_ex("＝特殊操作＝", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += offs; dr_text_ex("数字の周りに同じ数の旗が立っている場合、数字をクリックすると隣接するマ", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += offs; dr_text_ex("スのうち、旗の立っていないマスをまとめて開くことができます。", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
+		pos_y += 20.0;
+		pos_y += offs; dr_text_ex("[閉じる]", left + 20.0, top + pos_y, font_size,
+			&String::from("FFFFFFFF"), &String::from("007777FF"), myfont);
+
 	}
 
 	//------------------------------

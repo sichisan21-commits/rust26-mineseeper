@@ -29,6 +29,7 @@ pub type SharedSettings = Rc<RefCell<GameSettings>>;
 #[macroquad::main("Test Window")]
 async fn main()
 	{
+	// ライブラリの初期化
 	rand::srand(miniquad::date::now() as u64);
 
 	// フォントを読み込む
@@ -42,6 +43,7 @@ async fn main()
 	// タイトル画面とゲームメインを初期化する
 	let mut title_data = TitleMain::new();
 	title_data.setting_obj(my_setting.clone());
+
 	let mut game_data = GameMain::new();
 	game_data.setting_obj(my_setting.clone());
 
@@ -64,7 +66,7 @@ async fn main()
 				break;
 			}
 
-			// 状態がゲームに遷移した場合、ゲームを初期化
+			// 状態が「ゲーム」に遷移した場合、ゲームを初期化
 			if appmode == GameMode::Game {
 				let (width, height, bom_num) = title_data.get_setting();
 				game_data.set_gameinfo(width, height, bom_num);

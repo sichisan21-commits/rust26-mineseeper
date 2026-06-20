@@ -19,6 +19,7 @@ pub const WALL_RIGHT: f32 = 20.0;               // 右の壁
 pub const WALL_BOTTOM: f32 = 20.0;              // 下の壁
 pub const SCROLL_LEFT: f32 = 150.0;				// スクロールを開始する横位置
 pub const SCROLL_TOP: f32 = 150.0;				// スクロールを開始する立て位置
+pub const FONT_SIZE_TITLE: f32 = 60.0;			// フォントサイズ（タイトル用）
 pub const FONT_SIZE: f32 = 30.0;                // フォントサイズ
 pub const FONT_SIZE_BIG: f32 = 50.0;			// フォントサイズ（大）
 
@@ -64,6 +65,7 @@ pub enum CBGame {							// ゲーム用チェックボックス
 	Reset,									// 盤面のリセット
 	Title,									// タイトルへ戻る
 	Settings,								// 設定
+	HowTo,									// 操作方法
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

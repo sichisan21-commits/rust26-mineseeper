@@ -3,7 +3,7 @@ use macroquad::text::Font;
 use crate::utils::*;
 use crate::chkbox::ChkBox;
 
-pub struct ChkBoxMng<T> {						// 管理テーブル
+pub struct ChkBoxMng<T> {						// チェックボックス管理
 	chkboxs: Vec<ChkBox<T>>,					// チェックボックス配列
 	pos: PosTable,								// 起点座標
 	size: PosTable,								// 縦横サイズ
@@ -39,7 +39,7 @@ impl<T> ChkBoxMng<T>
 	}
 
 	//--------------------------------------------------
-	// チェックボックス追加
+	// チェックボックスの基本情報設定
 	//--------------------------------------------------
 	pub fn set_base(&mut self, left: f32, top: f32, width: f32, height: f32, fsize: f32, fgcol:&str, bgcol:&str) {
 		self.pos = PosTable{x: left, y: top};
@@ -75,7 +75,8 @@ impl<T> ChkBoxMng<T>
 			self.bgcol.clone(),
 		);			
 		self.chkboxs.push(chkbox);
-		// 次の座標もオフセットもリセットする
+
+		// 次回用の絶対座標・オフセットはリセットする
 		self.nextpos = PosTable{x:0.0, y:0.0};
 		self.nextoffs = PosTable{x:0.0, y:0.0};
 
@@ -88,7 +89,7 @@ impl<T> ChkBoxMng<T>
 	//--------------------------------------------------
 	pub fn addsub(&mut self, mytype:T, parent: T, text:String, flg: bool) {
 
-		// 初期値の設定
+		// 有効・無効は親のチェックオン・オフに準じる
 		let mut is_active = false;
 		for chkbox in &self.chkboxs {
 			if chkbox.get_type() == parent {
@@ -113,7 +114,7 @@ impl<T> ChkBoxMng<T>
 		);
 		self.chkboxs.push(chkbox);
 
-		// 次の座標もオフセットもリセットする
+		// 次回用の絶対座標・オフセットはリセットする
 		self.nextpos = PosTable{x:0.0, y:0.0};
 		self.nextoffs = PosTable{x:0.0, y:0.0};
 
@@ -132,7 +133,7 @@ impl<T> ChkBoxMng<T>
 	//--------------------------------------------------
 	// 次のチェックボックスのオフセットを設定（１回限り）
 	//--------------------------------------------------
-	pub fn set_next_offs(&mut self, offs:PosTable) {
+	pub fn _set_next_offs(&mut self, offs:PosTable) {
 		self.nextoffs = offs;
 	}
 
@@ -149,7 +150,7 @@ impl<T> ChkBoxMng<T>
 				continue;
 			}
 
-			// 子のチェックボックスの場合何もしない
+			// 子のチェックボックスの場合何もしない（親の時に計算する）
 			if let Some(_) = self.chkboxs[parent].get_parent() {
 				continue
 			}
@@ -181,7 +182,8 @@ impl<T> ChkBoxMng<T>
 						continue;
 					} 
 				// 子の座標を更新する
-				let mut pos = self.chkboxs[child].get_pos();
+				// 子のチェックボックスは親からの座標から 30.0 だけずらす
+				let mut pos = PosTable::default();
 				let size = self.chkboxs[child].get_size();
 				pos.x = pos_x + 30.0;
 				pos.y = pos_y;
@@ -222,24 +224,15 @@ impl<T> ChkBoxMng<T>
 			}
 		}
 	}
-		
-	//------------------------------
-	// 色の設定
-	//------------------------------
-	pub fn set_offs(&mut self, mytype: T, offs_x: f32, offs_y: f32) {
-		for chkbox in &mut self.chkboxs {
-			if chkbox.get_type() == mytype {
-				chkbox.set_offs(PosTable{x:offs_x, y:offs_y});
-			}
-		}
-	}
 
 	//------------------------------
 	// ヘルプテキストの設定
 	//------------------------------
 	pub fn set_help(&mut self, mytype: T, help_txt:&str) {
 		for chkbox in &mut self.chkboxs {
+			// 該当するチェックボックスにヘルプテキストを設定
 			if chkbox.get_type() == mytype {
+				// ヘルプテキストは改行（\n）で分割して配列として保持する
 				let lines: Vec<String> = help_txt
 					.split('\n')
     				.map(|s| s.to_string())
@@ -252,7 +245,7 @@ impl<T> ChkBoxMng<T>
 	//------------------------------
 	// チェックボックスの有効無効変更
 	//------------------------------
-	pub fn set_active_flg(&mut self, mytype: T, flg: bool) {
+	pub fn _set_active_flg(&mut self, mytype: T, flg: bool) {
 		for chkbox in &mut self.chkboxs {
 			if chkbox.get_type() == mytype {
 				chkbox.set_active_flg(flg);
@@ -317,8 +310,7 @@ impl<T> ChkBoxMng<T>
 		// 全てのチェックボックスのクリック判定
 		for parent in 0..self.chkboxs.len() {
 			// 対象のチェックボックスがクリックされた
-			if self.chkboxs[parent].is_mouse_over(mouse_x, mouse_y) {
-				self.chkboxs[parent].click();
+			if self.chkboxs[parent].click(mouse_x, mouse_y) {
 				// 子のチェックボックスへ連携
 				self.child_onoff(parent);
 				// クリック判定された場合タイプとフラグを返却
@@ -348,11 +340,12 @@ impl<T> ChkBoxMng<T>
 	//------------------------------
 	fn child_onoff(&mut self, parent: usize) {
 		let mut is_update = false;
-		let flg = self.chkboxs[parent].get_flg();
 
-		// 子供のチェックボックスを有効化
+		// 親のチェックオン／オフに合わせて子のチェックボックスの有効無効化
+		let flg = self.chkboxs[parent].get_flg();
 		for child in 0..self.chkboxs.len() {
 			if let Some(parent_type) = self.chkboxs[child].get_parent() {
+				// 子のチェックボックスを発見したら有効無効設定
 				if parent_type == self.chkboxs[parent].get_type(){
 					self.chkboxs[child].set_active_flg(flg);
 					is_update = true;

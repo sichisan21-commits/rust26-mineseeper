@@ -340,12 +340,12 @@ impl Panel {
 
 			// 強調表示（一旦力業）
 			if self.is_bold && is_cursol_around {
-				draw_text(&text, left + PANEL_FONT_OFFSX - 4.0, top + PANEL_FONT_OFFSY - 4.0, PANEL_FONT_SIZE, WHITE);
-				draw_text(&text, left + PANEL_FONT_OFFSX - 2.0, top + PANEL_FONT_OFFSY - 4.0, PANEL_FONT_SIZE, WHITE);
-				draw_text(&text, left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY - 4.0, PANEL_FONT_SIZE, WHITE);
-				draw_text(&text, left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY + 4.0, PANEL_FONT_SIZE, BLACK);
-				draw_text(&text, left + PANEL_FONT_OFFSX + 2.0, top + PANEL_FONT_OFFSY + 4.0, PANEL_FONT_SIZE, BLACK);
-				draw_text(&text, left + PANEL_FONT_OFFSX + 4.0, top + PANEL_FONT_OFFSY + 4.0, PANEL_FONT_SIZE, BLACK);
+				draw_text(&text, left + PANEL_FONT_OFFSX - 3.0, top + PANEL_FONT_OFFSY - 3.0, PANEL_FONT_SIZE, WHITE);
+				draw_text(&text, left + PANEL_FONT_OFFSX - 2.0, top + PANEL_FONT_OFFSY - 3.0, PANEL_FONT_SIZE, WHITE);
+//				draw_text(&text, left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY - 3.0, PANEL_FONT_SIZE, WHITE);
+//				draw_text(&text, left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY + 3.0, PANEL_FONT_SIZE, BLACK);
+				draw_text(&text, left + PANEL_FONT_OFFSX + 2.0, top + PANEL_FONT_OFFSY + 3.0, PANEL_FONT_SIZE, BLACK);
+				draw_text(&text, left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY + 3.0, PANEL_FONT_SIZE, BLACK);
 			}
 			draw_text(&text, left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, text_col);
 			draw_text(&text, left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, text_col);
@@ -372,6 +372,7 @@ impl Panel {
 			draw_text("F", left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, BLACK);
 			draw_text("F", left + PANEL_FONT_OFFSX,       top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, flag_col);
 			draw_text("F", left + PANEL_FONT_OFFSX - 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, flag_col);
+			return
 		}
 
 		if !is_cursol_around {
@@ -395,8 +396,10 @@ impl Panel {
 		// ユーザの旗を信じて判断したパネルまたは
 		// アシスト使用中で未確定パネルなら「？」表示する
 		if self.believe_flg || is_unknown {
-			draw_text("?", left + PANEL_FONT_OFFSX + 3.0, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, GRAY);
-			draw_text("?", left + PANEL_FONT_OFFSX, top + PANEL_FONT_OFFSY, PANEL_FONT_SIZE, GRAY);
+			dr_text("?", left + PANEL_FONT_OFFSX + 1.0, top + 7.0, PANEL_FONT_SIZE,
+				&String::from("AAAAAAFF"), &String::from("00000000"));
+			dr_text("?", left + PANEL_FONT_OFFSX - 2.0, top + 7.0, PANEL_FONT_SIZE,
+				&String::from("AAAAAAFF"), &String::from("00000000"));
 		}
 /*
 		} else if self.infe_flg {

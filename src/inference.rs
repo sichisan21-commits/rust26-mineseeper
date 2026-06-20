@@ -1,6 +1,5 @@
 use crate::panel::Panel;
 use crate::myconst::*;
-use std::collections::HashSet;
 
 // 推論テーブル
 struct Inference {
@@ -128,6 +127,7 @@ impl InfTable {
 	// 自動的に判別し危険マス／安全マスにフラグを立てる
 	//------------------------------
 	pub fn inference(&mut self, _is_dang_on: bool, _is_safe_on: bool, believe_flg: bool) {
+		println!("exec inference");
 		// 全てのアシスト表示をオフ
 		for index in 0..(self.width*self.height) as usize {
 			self.table[index].bold_off();
@@ -430,7 +430,7 @@ impl InfTable {
 		// 推論テーブルでループする
 		//--------------------------------------------------
 		for inference in &self.infe {
-			// 自分自身とは比較しない
+			// 自分の推論テーブルとは比較しない
 			if inference.myindex == cursol_index {
 				continue;
 			}

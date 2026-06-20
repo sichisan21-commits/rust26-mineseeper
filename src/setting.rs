@@ -23,8 +23,8 @@ impl GameSettings {
 		let mut gs = GameSettings {
 			chkbox: ChkBoxMng::new(),
 			mouse_pos: PosTable {x:0.0, y:0.0},
-			menu_pos: PosTable {x:0.0, y:0.0},
-			help_pos: PosTable {x:0.0, y:0.0},
+			menu_pos: PosTable {x:80.0, y:100.0},
+			help_pos: PosTable {x:30.0, y:10.0},
 		};
 
 		// チェックボックス作成
@@ -37,8 +37,8 @@ impl GameSettings {
 	// チェックボックス作成
 	//------------------------------
 	fn create_chkbox(&mut self) {
-		let left = 40.0;
-		let top = 50.0;
+		let left = self.menu_pos.x + 40.0;
+		let top = self.menu_pos.y + 50.0;
 
 		// チェックボックス作成
 		self.chkbox.set_base(left,top,200.0, 35.0, 25.0,"000000FF", "FFFFFFFF");
@@ -83,12 +83,12 @@ impl GameSettings {
 		self.chkbox.set_help(CBSetting::DragOpen,"[DRAG OPEN]\n押しっぱなしでまとめてパネルを開きます。");
 		self.chkbox.set_help(CBSetting::UseBlueFlg,"[USE BLUEFLAG]\n「青色の旗」を使用します、赤色の旗と区別したい場合に使用してください。");
 		self.chkbox.set_help(CBSetting::BlueFlgFirst,"[BLUEFLAG FIRST]\n旗を立てる順番を「青→赤→なし」へ変更します。");
-		self.chkbox.set_help(CBSetting::BoldFlg,"[USE BOLD]※初心者にお勧め\n「数字」と「周りの未開封パネル数」が一致していると強調表示されます。\n（正しく旗を立てると強調表示は消えます）");
+		self.chkbox.set_help(CBSetting::BoldFlg,"[USE BOLD] ※初心者にお勧め\n「数字」と「周りの未開封パネル数」が一致していると強調表示されます。\n（正しく旗を立てると強調表示は消えます）");
 		self.chkbox.set_help(CBSetting::BoldSafeOn,"[SAFETY ON]\n旗の周囲の安全パネルを表示します。");
 		self.chkbox.set_help(CBSetting::Inference,"[USE INFERENCE]\n見えている数字から、危険／安全パネルを推測します。");
 		self.chkbox.set_help(CBSetting::DangOn,"[DANGER ON]\n推論で危険パネルを表示します。");
 		self.chkbox.set_help(CBSetting::SafeOn,"[SAFETY ON]\n推論で安全パネルを表示します。");
-		self.chkbox.set_help(CBSetting::DispAll,"[ALL DISPLAY]\n全体に危険／安全パネルを表示します。");
+		self.chkbox.set_help(CBSetting::DispAll,"[ALL DISPLAY]\n盤面全体に危険／安全パネルを表示します。\n（デフォルトはマウスの隣接のみ表示）");
 		self.chkbox.set_help(CBSetting::BelieveFlag,"[BELIEVE FLAG]\nあなたの立てた旗を信じて推論します。");
 		self.chkbox.set_help(CBSetting::UndoFlg,"[USE UNDO]\nUNDO（やり直し）を有効にします。");
 		self.chkbox.set_help(CBSetting::HideOn,"[HIDE BORD]\nマウスの周囲だけ盤面を表示します。※タイマー起動中は変更できません。");
@@ -119,8 +119,8 @@ impl GameSettings {
 	// チェックボックスのクリック処理
 	//--------------------------------------------------
 	pub fn set_mouse_pos(&mut self, pos:PosTable) {
-		self.mouse_pos.x = pos.x - self.menu_pos.x;
-		self.mouse_pos.y = pos.y - self.menu_pos.y;
+		self.mouse_pos.x = pos.x;
+		self.mouse_pos.y = pos.y;
 	}
 
 	//--------------------------------------------------
@@ -279,61 +279,28 @@ impl GameSettings {
 		if self.chkbox.get_flg(CBSetting::Close) {
 			return
 		}
-		dr_rect(0.0,0.0,screen_width(),screen_height(),0.0,
-			"000000B0","");
+		dr_rect(0.0,0.0,screen_width(),screen_height(),
+			0.0, "00000090","");
 
 		//--------------------------------------------------
 		// メニューの描画
 		//--------------------------------------------------
 		// カメラをセット
-		let zoom = Vec2 {
-			x: 2.0 / screen_width(),
-			y: 2.0 / screen_height(),
-		};
-		let offset = Vec2 {
-			x: self.menu_pos.x * 2.0 / screen_width() - 1.0,
-			y: - (self.menu_pos.y * 2.0 / screen_height()) + 1.0,
-		};
-		let camera = Camera2D {
-			zoom, offset,
-			..Default::default()
-		};
-		set_camera(&camera);
-
 		// 設定画面表示
-		dr_rect(0.0,0.0,600.0,450.0,3.0,"00000099","FF0000FF");
-		dr_text_ex("-- SETTING --", 30.0, 10.0, 25.0,
-			"A0A0FFFF", "000000FF", myfont);
-		dr_text_ex("-- GAME MODE --", 30.0, 210.0, 25.0,
-			"A0A0FFFF", "000000FF", myfont);
-		dr_text_ex("-- ASSIST --", 340.0, 10.0, 25.0,
-			"A0A0FFFF", "000000FF", myfont);
+		dr_rect(self.menu_pos.x,self.menu_pos.y,600.0,450.0,
+			3.0,"00000099","FF0000FF");
+		dr_text_ex("-- SETTING --", self.menu_pos.x + 30.0, self.menu_pos.y + 10.0,
+			25.0, "A0A0FFFF", "000000FF", myfont);
+		dr_text_ex("-- GAME MODE --", self.menu_pos.x + 30.0, self.menu_pos.y + 210.0,
+			25.0, "A0A0FFFF", "000000FF", myfont);
+		dr_text_ex("-- ASSIST --", self.menu_pos.x + 340.0, self.menu_pos.y + 10.0,
+			25.0, "A0A0FFFF", "000000FF", myfont);
 		self.chkbox.draw(myfont);
-
-		// カメラをリセット
-		set_default_camera();
 
 		//--------------------------------------------------
 		// ヘルプの描画
 		//--------------------------------------------------
-		// カメラをセット
-		let zoom = Vec2 {
-			x: 2.0 / screen_width(),
-			y: 2.0 / screen_height(),
-		};
-		let offset = Vec2 {
-			x: self.help_pos.x * 2.0 / screen_width() - 1.0,
-			y: - (self.help_pos.y * 2.0 / screen_height()) + 1.0,
-		};
-		let camera = Camera2D {
-			zoom, offset,
-			..Default::default()
-		};
-		set_camera(&camera);
 		self.draw_help(myfont);
-
-		// カメラをリセット
-		set_default_camera();
 
 	}
 
@@ -350,8 +317,8 @@ impl GameSettings {
 			// ヘルプ周囲を塗りつぶす
 			let fontsize = 20.0;
 			let offs = 5.0;
-			let left = 0.0;
-			let top = 0.0;
+			let left = self.help_pos.x;
+			let top = self.help_pos.y;
 			let height = help_lines.len() as f32 * (fontsize + offs);
 			dr_rect(left - 5.0, top - 5.0,
 				750.0 + 10.0, height + 10.0, 0.0,
