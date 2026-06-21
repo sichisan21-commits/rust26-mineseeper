@@ -757,13 +757,17 @@ impl GameMain {
 			WALL_LEFT - 30.0, WALL_TOP - 40.0, 20.0,
 			"000000FF", "FFFFFFFF", myfont);
 
-		// メニューの表示
+		// 状態の表示
 		let bg = String::from("000000FF");
 		let (text, fg) =
 			if self.stat == GameStat::Ready {
 				("[ READY ]", String::from("00FFFFFF"))
 			} else if self.stat == GameStat::Playing {
-				("[  Go!! ]", String::from("00FFFFFF"))
+				if  (self.tm.played - self.tm.playst < 1.0) {
+					("[  GO!! ]", String::from("00FFFFFF"))
+				} else {
+					("",String::from("000000FF"))
+				}
 			} else if self.stat == GameStat::Success {
 				("[CLEAR!!]", String::from("FFFF00FF"))
 			} else if self.stat == GameStat::Failed {
@@ -848,6 +852,18 @@ impl GameMain {
 			0.0, pos_y,font_size,"FFFFFFFF", "000000FF",myfont);
 */
 		//--------------------------------------------------
+		// カーソル周辺に「CLEAR」を表示
+		//--------------------------------------------------
+		if self.stat == GameStat::Success && get_time() - self.tm.played < 0.5 {
+			let offs_y = ((get_time() - self.tm.played) * 100.0) as f32;
+			let offs_x = offs_y * 0.2;
+			dr_text("CLEAR!!", self.mouse.pos.x -60.0, self.mouse.pos.y - offs_y,
+				FONT_SIZE_BIG, "00000055", "");
+			dr_text("CLEAR!!", self.mouse.pos.x -60.0 - offs_x, self.mouse.pos.y - offs_y * 1.2,
+				FONT_SIZE_BIG + offs_y * 0.2, "FFFF00FF", "000000AA");
+		}
+
+		//--------------------------------------------------
 		// 設定画面表示
 		//--------------------------------------------------
 		self.setting.as_ref().unwrap().borrow().draw(myfont);
@@ -877,12 +893,12 @@ impl GameMain {
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
 		pos_y += offs; dr_text_ex("表示されているテーブルには爆弾が埋まっています。マウスクリックで爆弾の", left + 20.0, top + pos_y, font_size,
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("「埋まっていない」マスをすべて開けてください。", left + 20.0, top + pos_y, font_size,
+		pos_y += offs; dr_text_ex("「埋まっていない」パネルをすべて開けてください。", left + 20.0, top + pos_y, font_size,
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
 		pos_y += 20.0;
 		pos_y += offs; dr_text_ex("表示された数字はその周囲の「爆弾の数」です。例えば「１」であった場合、", left + 20.0, top + pos_y, font_size,
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("隣接するマスのどこかに「１つ」だけ爆弾が存在します。", left + 20.0, top + pos_y, font_size,
+		pos_y += offs; dr_text_ex("隣接するパネルのどこかに「１つ」だけ爆弾が存在します。", left + 20.0, top + pos_y, font_size,
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
 		pos_y += 20.0;
 		pos_y += offs; dr_text_ex("＝操作方法＝", left + 20.0, top + pos_y, font_size,
@@ -900,7 +916,7 @@ impl GameMain {
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
 		pos_y += offs; dr_text_ex("数字の周りに同じ数の旗が立っている場合、数字をクリックすると隣接するマ", left + 20.0, top + pos_y, font_size,
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("スのうち、旗の立っていないマスをまとめて開くことができます。", left + 20.0, top + pos_y, font_size,
+		pos_y += offs; dr_text_ex("スのうち、旗の立っていないパネルをまとめて開くことができます。", left + 20.0, top + pos_y, font_size,
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
 		pos_y += 20.0;
 		pos_y += offs; dr_text_ex("[閉じる]", left + 20.0, top + pos_y, font_size,
@@ -943,7 +959,7 @@ impl GameMain {
 			self.stat == GameStat::Playing || self.stat == GameStat::Ready);
 
 		// カーソル周りに枠を表示
-		if self.get_chkbox_flg(CBSetting::CursolFlg) {
+		if self.cursol.index != -1 && self.get_chkbox_flg(CBSetting::CursolFlg) {
 			self.tb.table.draw_curasol();
 		}
 

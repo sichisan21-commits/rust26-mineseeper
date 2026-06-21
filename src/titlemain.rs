@@ -241,12 +241,12 @@ impl TitleMain {
 		//--------------------------------------------------
 		// タイトル描画
 		//--------------------------------------------------
-		dr_rect(0.0, 60.0, 700.0, 30.0, 0.0, "0000FFFF","");
+		dr_rect(0.0, 80.0, 700.0, 20.0, 0.0, "0000FFFF","");
 		dr_text_ex("Lets MINE SWEEPER", 20.0, 5.0, 70.0,
 			&String::from("0000A0FF"),&String::from("FFFFFFFF"), myfont);
 		dr_text_ex("'", 150.0, 10.0, 70.0,
 			&String::from("0000A0FF"),&String::from("FFFFFFFF"), myfont);
-		dr_text_ex("v1.0", 620.0, 40.0, 30.0,
+		dr_text_ex("v1.0", 620.0, 5.0, 20.0,
 			&String::from("0000A0FF"),&String::from("FFFFFFCC"), myfont);
 
 		//--------------------------------------------------

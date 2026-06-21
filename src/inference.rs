@@ -481,9 +481,9 @@ impl InfTable {
 				for index in remain {
 					self.table[index as usize].set_autoflag(AutoSts::Safety, self.believe_flg);
 					self.table[index as usize].set_infe_flg(true);
-					if self.table[index as usize].is_bom() {
-						println!("安全ではないマスを安全と判定した={}", index);
-					}
+//					if self.table[index as usize].is_bom() {
+//						println!("安全ではないマスを安全と判定した={}", index);
+//					}
 				}
 			} else if outnum == 0 && around_num - inference.bomnum == remain.len() as i32 {
 				// 推論テーブルがカーソルの周囲に完全一致しており（outnum == 0）
@@ -494,9 +494,9 @@ impl InfTable {
 					self.table[index as usize].set_autoflag(AutoSts::Danger, self.believe_flg);
 					self.table[index as usize].set_infe_flg(true);
 					if !self.table[index as usize].is_bom() {
-						println!("危険ではないマスを危険と判定した:{},around={},tgt={},infbom={},remainlen={}",
-							cursol_index, around_num, index, inference.bomnum, remain_len);
-					}
+//						println!("危険ではないマスを危険と判定した:{},around={},tgt={},infbom={},remainlen={}",
+//							cursol_index, around_num, index, inference.bomnum, remain_len);
+//					}
 				}
 			}
 		}

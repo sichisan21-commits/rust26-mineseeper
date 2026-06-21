@@ -43,7 +43,7 @@ impl GameSettings {
 		// チェックボックス作成
 		self.chkbox.set_base(left,top,200.0, 35.0, 25.0,"000000FF", "FFFFFFFF");
 		// 各種設定
-		self.chkbox.add(CBSetting::CursolFlg, String::from("CURSOL FLAME"), true);
+		self.chkbox.add(CBSetting::CursolFlg, String::from("CURSOL FLAME"), false);
 		self.chkbox.add(CBSetting::DragOpen, String::from("DRAG OPEN"), false);
 		self.chkbox.add(CBSetting::UseBlueFlg, String::from("USE BLUEFLAG"), false);
 		// 盤面を隠すモード
