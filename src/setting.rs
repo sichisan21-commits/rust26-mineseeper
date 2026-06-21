@@ -68,7 +68,7 @@ impl GameSettings {
 		self.chkbox.addsub(CBSetting::BoldSafeOn, CBSetting::BoldFlg,String::from("SAFETY ON"), false);
 		self.chkbox.addsub(CBSetting::SafeOn,CBSetting::Inference, String::from("SAFETY ON"), false);
 		self.chkbox.addsub(CBSetting::DangOn,CBSetting::Inference, String::from("DANGER ON"), true);
-		self.chkbox.addsub(CBSetting::BelieveFlag,CBSetting::Inference, String::from("BELEVE FLAG"), false);
+		self.chkbox.addsub(CBSetting::BelieveFlag,CBSetting::Inference, String::from("BELIEVE FLAG"), false);
 		self.chkbox.addsub(CBSetting::HideLv1, CBSetting::HideOn,String::from("LEVEL1"), true);
 		self.chkbox.addsub(CBSetting::HideLv2, CBSetting::HideOn,String::from("LEVEL2"), false);
 		self.chkbox.addsub(CBSetting::HideLv3, CBSetting::HideOn,String::from("LEVEL3"), false);
