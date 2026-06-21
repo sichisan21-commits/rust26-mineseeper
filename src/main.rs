@@ -26,7 +26,7 @@ pub type SharedSettings = Rc<RefCell<GameSettings>>;
 //--------------------------------------------------
 // main
 //--------------------------------------------------
-#[macroquad::main("Test Window")]
+#[macroquad::main("Let's MINE SWEEPER")]
 async fn main()
 	{
 	// ライブラリの初期化

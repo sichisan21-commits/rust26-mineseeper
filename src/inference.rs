@@ -230,7 +230,7 @@ impl InfTable {
 	// believe_flg＝ユーザの立てた旗を信じて推論を行うか
 	//------------------------------
 	pub fn inference(&mut self, _is_dang_on: bool, _is_safe_on: bool, believe_flg: bool) {
-		println!("exec inference");
+//		println!("exec inference");
 		// 全てのアシスト表示をオフ
 		for index in 0..(self.width*self.height) as usize {
 			self.table[index].bold_off();
