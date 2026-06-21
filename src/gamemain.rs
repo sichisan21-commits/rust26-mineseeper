@@ -89,7 +89,7 @@ impl GameMain {
 	//------------------------------
 	fn mk_chkbox(&mut self) {
 		// チェックボックス作成
-        self.chkbox.set_base(10.0,200.0,110.0, 40.0, 20.0,"000000FF", "000077FF");
+        self.chkbox.set_base(10.0,220.0,160.0, 40.0, 20.0,"000000FF", "000077FF");
 		// リセットボタン作成
 		self.chkbox.add(CBGame::Reset, String::from("[RESET]"), false);
 		self.chkbox.set_col(CBGame::Reset, "FFFF77FF","");
@@ -739,6 +739,8 @@ impl GameMain {
 			0.0, MENU_COLOR, "");
 		dr_rect(0.0, WALL_TOP - 20.0, WALL_LEFT - 30.0, self.screen.y + 20.0,
 			0.0, MENU_COLOR, "");
+		dr_text_ex("--- MENU ---", 20.0, WALL_TOP + 100.0, 20.0,
+			&String::from("000000FF"), &String::from("FFFFFFFF"),myfont);
 
 		// 盤面サイズなどの表示
 		let flag_num = self.tb.table.get_num_redflag();

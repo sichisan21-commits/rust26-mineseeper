@@ -308,6 +308,11 @@ impl TitleMain {
 	// 情報画面
 	//----------------------------------------
 	fn draw_credits(&self, myfont: &Font) {
+		// 設定画面を開いているときは何もしない
+		if self.setting.as_ref().unwrap().borrow().is_open() {
+			return;
+		}
+
 		if let Some((_typ, helptext)) =
 		   self.chkbox.gethelp(self.mouse_pos) {
 			// ヘルプが設定されていない場合何もしない
