@@ -30,7 +30,7 @@ impl TitleMain {
 			chkbox: ChkBoxMng::new(),
 			txtwidth: TextBox::new("10",150.0,360.0,70.0,30.0, 5, 35),
 			txtheight: TextBox::new("10",150.0,400.0,70.0,30.0, 5, 35),
-			txtbom: TextBox::new("15",150.0,440.0,70.0,30.0, 1, 900),
+			txtbom: TextBox::new("16",150.0,440.0,70.0,30.0, 1, 900),
 			setting: None,
 		};
 
@@ -66,7 +66,7 @@ impl TitleMain {
 		self.chkbox.view_box(CBTitle::Quit, false);
 
 		// 設定
-		self.chkbox.add(CBTitle::Settings, String::from("[SETTING]"),false);
+		self.chkbox.add(CBTitle::Settings, String::from("[SETTINGS]"),false);
 		self.chkbox.set_col(CBTitle::Settings, "77FFFFFF", "");
 		self.chkbox.view_box(CBTitle::Settings, false);
 
@@ -132,26 +132,41 @@ impl TitleMain {
 		self.txtbom.set_max(width * height - 1);
 		
 		// テキストボックス（幅）の制御
-		let is_tab = self.txtwidth.update();
-		// タブが入力されたらフォーカスを移す
-		if is_tab {
-			self.txtheight.focus();
+		let (key, shift_on) = self.txtwidth.update();
+		// タブかエンターが入力されたらフォーカスを移す
+		if key == KeyCode::Tab || key == KeyCode::Enter {
+			self.txtwidth.focus_off();
+			if shift_on {
+				self.txtbom.focus();
+			} else {
+				self.txtheight.focus();
+			}
 			return;
 		}
 
 		// テキストボックス（縦）の制御
-		let is_tab = self.txtheight.update();
-		// タブが入力されたらフォーカスを移す
-		if is_tab {
-			self.txtbom.focus();			
+		let (key, shift_on) = self.txtheight.update();
+		// タブかエンターが入力されたらフォーカスを移す
+		if key == KeyCode::Tab || key == KeyCode::Enter {
+			self.txtheight.focus_off();
+			if shift_on {
+				self.txtwidth.focus();
+			} else {
+				self.txtbom.focus();
+			}
 			return;
 		}
 
 		// テキストボックス（爆弾数）の制御
-		let is_tab = self.txtbom.update();
-		// タブが入力されたらフォーカスを移す
-		if is_tab {
-			self.txtwidth.focus();			
+		let (key, shift_on) = self.txtbom.update();
+		// タブかエンターが入力されたらフォーカスを移す
+		if key == KeyCode::Tab || key == KeyCode::Enter {
+			self.txtbom.focus_off();
+			if shift_on {
+				self.txtheight.focus();
+			} else {
+				self.txtwidth.focus();
+			}
 			return;
 		}
 	}
@@ -184,6 +199,11 @@ impl TitleMain {
 					// 対象のチェックボックスだけオン
 					self.chkbox.clear_flg();
 					self.chkbox.set_flg(kind, true);
+
+					// EDITが選択された場合はチェックすボックスを WIDTH へフォーカス
+					if kind == CBTitle::Edit {
+						self.txtwidth.focus();
+					}
 					true
 				}
 			}

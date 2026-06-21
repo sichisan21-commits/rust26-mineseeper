@@ -91,19 +91,19 @@ impl GameMain {
 		// チェックボックス作成
         self.chkbox.set_base(30.0,200.0,110.0, 40.0, 25.0,"000000FF", "000077FF");
 		// リセットボタン作成
-		self.chkbox.add(CBGame::Reset, String::from("[ RESET ]"), false);
+		self.chkbox.add(CBGame::Reset, String::from("[ RESET  ]"), false);
 		self.chkbox.set_col(CBGame::Reset, "FFFF77FF","");
 		self.chkbox.view_box(CBGame::Reset, false);
 		// 設定ボタン作成
-		self.chkbox.add(CBGame::Settings, String::from("[SETTING]"), false);
+		self.chkbox.add(CBGame::Settings, String::from("[SETTINGS]"), false);
 		self.chkbox.set_col(CBGame::Settings, "77FFFFFF","");
 		self.chkbox.view_box(CBGame::Settings, false);
 		// タイトルへ戻るボタン作成
-		self.chkbox.add(CBGame::Title, String::from("[ TITLE ]"), false);
+		self.chkbox.add(CBGame::Title, String::from("[ TITLE  ]"), false);
 		self.chkbox.set_col(CBGame::Title, "FF7777FF","");
 		self.chkbox.view_box(CBGame::Title, false);
 		// 操作方法
-		self.chkbox.add(CBGame::HowTo, String::from("[HOW TO ]"), false);
+		self.chkbox.add(CBGame::HowTo, String::from("[ HOW TO ]"), false);
 		self.chkbox.set_col(CBGame::HowTo, "FFFFFFFF","");
 		self.chkbox.view_box(CBGame::HowTo, false);
 		// 値判定表示の指定
@@ -882,7 +882,7 @@ impl GameMain {
 		pos_y += 20.0;
 		pos_y += offs; dr_text_ex("表示された数字はその周囲の「爆弾の数」です。例えば「１」であった場合、", left + 20.0, top + pos_y, font_size,
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("隣接するマスに「１つ」だけ爆弾が存在します。", left + 20.0, top + pos_y, font_size,
+		pos_y += offs; dr_text_ex("隣接するマスのどこかに「１つ」だけ爆弾が存在します。", left + 20.0, top + pos_y, font_size,
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
 		pos_y += 20.0;
 		pos_y += offs; dr_text_ex("＝操作方法＝", left + 20.0, top + pos_y, font_size,

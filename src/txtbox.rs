@@ -10,6 +10,7 @@ pub struct TextBox {
 	min: i32,
 	max: i32,
 	focused: bool,
+	shift_on: bool,
 }
 
 impl TextBox {
@@ -18,6 +19,7 @@ impl TextBox {
 			text: text.to_string(),
 			x, y, w, h, min, max,
 			focused: false,
+			shift_on: false,
 		}
 	}
 
@@ -36,17 +38,45 @@ impl TextBox {
 	}
 
 	//--------------------------------------------------
-	// 対象にフォーカスする
-	// タブでフォーカスアウトされた場合 true を返す
+	// フォーカスを外す
 	//--------------------------------------------------
-	pub fn update(&mut self) -> bool {
-		let mut is_tab = false;
+	pub fn focus_off(&mut self) {
+		self.focused = false;
+	}
+
+	//--------------------------------------------------
+	// 対象にフォーカスする
+	// 戻り値：（入力されたコード,シフトオンオフ）
+	//--------------------------------------------------
+	pub fn update(&mut self) -> (KeyCode, bool) {
+		// シフトキーダウン・アップを記憶する
+		if is_key_pressed(KeyCode::LeftShift) | is_key_pressed(KeyCode::RightShift){
+			self.shift_on = true;
+		}
+		if is_key_released(KeyCode::LeftShift) | is_key_released(KeyCode::RightShift){
+			self.shift_on = false;
+		}
+
+		// 最小最大チェック
+		if !self.focused {
+		   if self.text == "" || self.text.parse::<i32>().unwrap_or(0) < self.min {
+				self.text = self.min.to_string();
+		   }
+			if self.text.parse::<i32>().unwrap_or(0) > self.max {
+				self.text = self.max.to_string();
+			}
+		}
 
 		// クリックでフォーカス
 		if is_mouse_button_pressed(MouseButton::Left) {
 			let (mx, my) = mouse_position();
 			self.focused = mx >= self.x && mx <= self.x + self.w &&
 						   my >= self.y && my <= self.y + self.h;
+		}
+
+		// フォーカスされていない場合キー受け付けせずに終了
+		if !self.focused {
+			return (KeyCode::Space, self.shift_on);
 		}
 
 		// フォーカス中だけ文字入力
@@ -57,10 +87,19 @@ impl TextBox {
 				}
 			}
 
-			// タブ
-			if is_key_pressed(KeyCode::Tab) || is_key_pressed(KeyCode::Enter){
-				self.focused = false;
-				is_tab = true;
+			// 上下左右キー
+			if is_key_pressed(KeyCode::Up) {
+				// 上キーは１０増やす
+				self.text = (self.text.parse::<i32>().unwrap_or(self.min) + 10).min(self.max).to_string();
+			} else if is_key_pressed(KeyCode::Right) {
+				// 右キーは１増やす
+				self.text = (self.text.parse::<i32>().unwrap_or(self.min) + 1).min(self.max).to_string();
+			} else if is_key_pressed(KeyCode::Down) {
+				// 下キーは１０減らす
+				self.text = (self.text.parse::<i32>().unwrap_or(self.min) - 10).max(self.min).to_string();
+			} else if is_key_pressed(KeyCode::Left){
+				// 左キーは１減らす
+				self.text = (self.text.parse::<i32>().unwrap_or(self.min) - 1).max(self.min).to_string();
 			}
 
 			// バックスペース
@@ -74,28 +113,21 @@ impl TextBox {
 				.collect();
 		}
 
-		// 最小値チェック
-		if !self.focused &&
-		   (self.text == "" || self.text.parse::<i32>().unwrap_or(0) < self.min) {
-			self.text = self.min.to_string();
-		}
-
-		// 最大値チェック
-		if !self.focused &&
-		   self.text.parse::<i32>().unwrap_or(0) > self.max {
-			self.text = self.max.to_string();
-		}
-
-		is_tab
+		let key = get_last_key_pressed().unwrap_or(KeyCode::Space);
+		(key, self.shift_on)
 	}
 
 	//--------------------------------------------------
 	// 入力値を返却
 	//--------------------------------------------------
 	pub fn get_value(&self) -> i32 {
-		self.text.parse::<i32>().unwrap_or(self.min)
+		// テキストを数値に変換し、最小・最大値の範囲で返却する
+		self.text.parse::<i32>().unwrap_or(self.min).max(self.min).min(self.max)
 	}
 
+	//--------------------------------------------------
+	// 描画
+	//--------------------------------------------------
 	pub fn draw(&self) {
 		// 枠
 		dr_rect(self.x, self.y, self.w, self.h, 5.0,
@@ -106,6 +138,7 @@ impl TextBox {
 		if self.focused {
 			text.push_str("|");
 		}
-		draw_text(&text, self.x + 5.0, self.y + self.h - 8.0, 24.0, WHITE);
+		dr_text(&text, self.x + 5.0, self.y + 5.0, 28.0,
+			"FFFFFFFF", if self.focused {"FF000077"} else {"00000000"});
 	}
 }
