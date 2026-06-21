@@ -854,13 +854,9 @@ impl GameMain {
 		//--------------------------------------------------
 		// カーソル周辺に「CLEAR」を表示
 		//--------------------------------------------------
-		if self.stat == GameStat::Success && get_time() - self.tm.played < 0.5 {
-			let offs_y = ((get_time() - self.tm.played) * 100.0) as f32;
-			let offs_x = offs_y * 0.2;
-			dr_text("CLEAR!!", self.mouse.pos.x -60.0, self.mouse.pos.y - offs_y,
-				FONT_SIZE_BIG, "00000055", "");
-			dr_text("CLEAR!!", self.mouse.pos.x -60.0 - offs_x, self.mouse.pos.y - offs_y * 1.2,
-				FONT_SIZE_BIG + offs_y * 0.2, "FFFF00FF", "000000AA");
+		if self.stat == GameStat::Success && get_time() - self.tm.played < 1.0 {
+			dr_text("CLEAR!!", self.mouse.pos.x - 60.0, self.mouse.pos.y -40.0,
+				FONT_SIZE_BIG, "FFFF00FF", "000000AA");
 		}
 
 		//--------------------------------------------------
@@ -914,9 +910,9 @@ impl GameMain {
 		pos_y += 20.0;
 		pos_y += offs; dr_text_ex("＝特殊操作＝", left + 20.0, top + pos_y, font_size,
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("数字の周りに同じ数の旗が立っている場合、数字をクリックすると隣接するマ", left + 20.0, top + pos_y, font_size,
+		pos_y += offs; dr_text_ex("数字と周囲の旗の数が一致している場合、数字をクリックすると周囲の旗の立っ", left + 20.0, top + pos_y, font_size,
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("スのうち、旗の立っていないパネルをまとめて開くことができます。", left + 20.0, top + pos_y, font_size,
+		pos_y += offs; dr_text_ex("ていないパネルをまとめて開くことができます。", left + 20.0, top + pos_y, font_size,
 			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
 		pos_y += 20.0;
 		pos_y += offs; dr_text_ex("[閉じる]", left + 20.0, top + pos_y, font_size,

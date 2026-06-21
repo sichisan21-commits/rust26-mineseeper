@@ -94,11 +94,11 @@ impl GameSettings {
 		self.chkbox.set_help(CBSetting::DispAll,"[ALL DISPLAY]\n盤面全体に危険／安全パネルを表示します。\n（デフォルトはマウスの隣接のみ表示）");
 		self.chkbox.set_help(CBSetting::BelieveFlag,"[BELIEVE FLAG]\nあなたの立てた旗を信じて推論します。");
 		self.chkbox.set_help(CBSetting::UndoFlg,"[USE UNDO]\nUNDO（やり直し）を有効にします。");
-		self.chkbox.set_help(CBSetting::HideOn,"[HIDE BORD]\nマウスの周囲だけ盤面を表示します。※タイマー起動中は変更できません。");
+		self.chkbox.set_help(CBSetting::HideOn,"[HIDE BORD]（アシスト使用不可）\nマウスの周囲だけ盤面を表示します。※タイマー起動中は変更できません。");
 		self.chkbox.set_help(CBSetting::HideLv1,"[LEVEL1]\n周囲５×５まで表示します。");
 		self.chkbox.set_help(CBSetting::HideLv2,"[LEVEL2]\n周囲３×３まで表示します。");
 		self.chkbox.set_help(CBSetting::HideLv3,"[LEVEL3]\nマウス位置以外は表示されません");
-		self.chkbox.set_help(CBSetting::HideNumOn,"[HIDE NUMBER]\nマウスの周囲だけ数字を表示します。※タイマー起動中は変更できません。");
+		self.chkbox.set_help(CBSetting::HideNumOn,"[HIDE NUMBER]（アシスト使用不可）\nマウスの周囲だけ数字を表示します。※タイマー起動中は変更できません。");
 		self.chkbox.set_help(CBSetting::HideNumLv1,"[LEVEL1]\n周囲５×５まで表示します。");
 		self.chkbox.set_help(CBSetting::HideNumLv2,"[LEVEL2]\n周囲３×３まで表示します。");
 		self.chkbox.set_help(CBSetting::HideNumLv3,"[LEVEL3]\nマウス位置以外は表示されません");
