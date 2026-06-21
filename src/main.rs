@@ -32,7 +32,7 @@ async fn main()
 	rand::srand(miniquad::date::now() as u64);
 
 	// フォントを読み込む
-	let myfont = load_ttf_font("assets/BIZUDPGothic-Bold.ttf").await.unwrap();
+	let myfont = load_ttf_font("font/BIZUDPGothic-Bold.ttf").await.unwrap();
 
 	// 設定画面を初期化する
 	let my_setting = Rc::new(RefCell::new(GameSettings::new()));
