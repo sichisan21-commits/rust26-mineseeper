@@ -241,12 +241,7 @@ impl<T> ChkBoxMng<T>
 		for chkbox in &mut self.chkboxs {
 			// 該当するチェックボックスにヘルプテキストを設定
 			if chkbox.get_type() == mytype {
-				// ヘルプテキストは改行（\n）で分割して配列として保持する
-				let lines: Vec<String> = help_txt
-					.split('\n')
-    				.map(|s| s.to_string())
-    				.collect();
-				chkbox.set_help(lines);
+				chkbox.set_help(help_txt);
 			}
 		}
 	}
@@ -332,7 +327,7 @@ impl<T> ChkBoxMng<T>
 	//------------------------------
 	// マウスオーバーしているチェックボックスのヘルプを取得する
 	//------------------------------
-	pub fn gethelp(&self, mouse:PosTable) -> Option<(T, &[String])> {
+	pub fn gethelp(&self, mouse:PosTable) -> Option<(T, &str)> {
 		// 全てのチェックボックスのクリック判定
 		for parent in 0..self.chkboxs.len() {
 			// マウスオーバーを判定する

@@ -50,6 +50,7 @@ pub fn dr_text(text: &str, pos_x:f32, pos_y:f32, size: f32, fg:&str, bg:&str) {
 // myfont＝フォントオブジェクト
 //--------------------------------------------------
 pub fn dr_text_ex(text: &str, pos_x:f32, pos_y:f32, size: f32, fg:&str, bg:&str, myfont: &Font) {
+//	let size = size * 0.7;
 	let fgcol = mycol(fg);
 	let offs_y = size * 1.0;
 
@@ -80,6 +81,29 @@ pub fn dr_text_ex(text: &str, pos_x:f32, pos_y:f32, size: f32, fg:&str, bg:&str,
 		..Default::default()};
 	draw_text_ex(text, pos_x, pos_y + offs_y, txt_params.clone());
 }
+
+//--------------------------------------------------
+// マルチライン文字描画
+// text＝文字列
+// pos_x＝表示位置（横）
+// pos_y＝表示位置（縦）
+// fsize＝フォントサイズ
+// offs＝行の間隔
+// fg＝文字色
+// bg＝文字縁色
+// myfont＝フォントオブジェクト
+//--------------------------------------------------
+pub fn dr_text_ex_multi (text: &str, pos_x:f32, pos_y:f32, fsize: f32, offs: f32, fg:&str, bg:&str, myfont: &Font) {
+	let textlines: Vec<String> = text
+		.split('\n')
+    	.map(|s| s.to_string())
+    	.collect();
+	for (i, line) in textlines.iter().enumerate() {
+		dr_text_ex(line, pos_x, pos_y + i as f32 * (fsize + offs),
+			fsize, fg, bg, myfont);
+		}
+	}
+	
 
 //--------------------------------------------------
 // 矩形の描画

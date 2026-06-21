@@ -14,12 +14,12 @@ pub struct ChkBox<T>{
 	fgcol: String,								// 前面色
 	bgcol: String,								// 輪郭色
 	is_absolute: bool,							// 絶対座標か相対座標か
-	pos: PosTable,								// 実座標
-	size: PosTable,								// 当たり判定
+	pos: PosTable,								// 表示座標
+	size: PosTable,								// サイズ
 	offs: PosTable,								// オフセット
 	viewbox: bool,								// [*] の表示有無
 	hitbox: bool,								// 当たり判定表示
-	help_txt: Vec<String>,						// 説明文
+	help_txt: String,							// 説明文
 }
 
 //--------------------------------------------------
@@ -62,7 +62,7 @@ impl<T> ChkBox<T>
 			offs,
 			size,
 			hitbox: false,
-			help_txt: Vec::new(),
+			help_txt: String::new(),
 			}
 	}
 	
@@ -94,13 +94,9 @@ impl<T> ChkBox<T>
 		}
 
 		// 当たり判定の算出
-		// フォントサイズと表示に乖離があるので判定を 10.0 小さくしている
-		let left = self.pos.x + self.offs.x;
-		let top = self.pos.y + self.offs.y;
-		let right = left + self.size.x;
-		let bottom = top + self.size.y - 10.0;
-		if mouse.x >= left && mouse.x <= right &&
-		   mouse.y >= top && mouse.y <= bottom {
+		let (min, max) = get_hitbox(self.pos, self.offs, self.size);
+		if mouse.x >= min.x && mouse.x <= max.x &&
+		   mouse.y >= min.y && mouse.y <= max.y {
 			return true
 		}
 		false
@@ -136,14 +132,14 @@ impl<T> ChkBox<T>
 	// ヘルプテキストの設定
 	// help_txt＝テキスト型の配列
 	//--------------------------------------------------
-	pub fn set_help(&mut self, help_txt: Vec<String>) {
-		self.help_txt = help_txt;
+	pub fn set_help(&mut self, help_txt: &str) {
+		self.help_txt = help_txt.to_string();
 	}
 
 	//------------------------------
 	// ヘルプテキストの返却
 	//------------------------------
-	pub fn get_help(&self) -> &[String] {
+	pub fn get_help(&self) -> &str {
 		&self.help_txt
 	}
 
@@ -251,9 +247,9 @@ impl<T> ChkBox<T>
 			if !self.viewbox {
 				""
 			} else if self.flg {
-				"[*]"
+				"[＊]"
 			} else {
-				"[ ]"
+				"[－]"
 			}
 		};
 
@@ -272,10 +268,21 @@ impl<T> ChkBox<T>
 
 		// 当たり判定表示
 		if self.hitbox {
-			let left = self.pos.x + self.offs.x;
-			let top = self.pos.y + self.offs.y - 10.0;
-			dr_rect(left, top, self.size.x, self.size.y, 3.0, "", "FF0000FF");
+			let (min, max) = get_hitbox(self.pos, self.offs, self.size);
+			dr_rect(min.x, min.y, max.x - min.x, max.y - min.y, 3.0, "", "FF0000FF");
 		}
 	}
 
+}
+
+fn get_hitbox(pos: PosTable, offs: PosTable, size: PosTable) -> (PosTable, PosTable) {
+	let min = PosTable {
+		x: pos.x + offs.x,
+		y: pos.y + offs.y,
+		};
+	let max = PosTable {
+		x: pos.x + size.x + offs.x,
+		y: pos.y + size.y * 0.8 + offs.y,
+		};
+	(min,max)
 }

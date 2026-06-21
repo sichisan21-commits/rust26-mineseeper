@@ -28,9 +28,9 @@ impl TitleMain {
 		let mut gm = TitleMain {
 			mouse_pos: PosTable { x: 0.0, y: 0.0 },
 			chkbox: ChkBoxMng::new(),
-			txtwidth: TextBox::new("10",150.0,360.0,70.0,30.0, 5, 35),
-			txtheight: TextBox::new("10",150.0,400.0,70.0,30.0, 5, 35),
-			txtbom: TextBox::new("16",150.0,440.0,70.0,30.0, 1, 900),
+			txtwidth: TextBox::new("10",170.0,390.0,70.0,30.0, 5, 35),
+			txtheight: TextBox::new("10",170.0,430.0,70.0,30.0, 5, 35),
+			txtbom: TextBox::new("16",170.0,470.0,70.0,30.0, 1, 900),
 			setting: None,
 		};
 
@@ -45,8 +45,8 @@ impl TitleMain {
 	//----------------------------------------
 	fn create_chkbox(&mut self) {
 		// チェックボックスの基本情報設定
-        self.chkbox.set_base(50.0,120.0,250.0, FONT_SIZE_TITLE,
-			FONT_SIZE * 1.5,"FFFF00FF", "0000A0A0");
+        self.chkbox.set_base(50.0,150.0,250.0, FONT_SIZE_TITLE * 1.5,
+			FONT_SIZE_TITLE,"FFFF00FF", "0000A0A0");
 
 		// 難易度項目
 		self.chkbox.add(CBTitle::Easy, String::from("EASY"),false);
@@ -55,7 +55,7 @@ impl TitleMain {
 		self.chkbox.add(CBTitle::Edit, String::from("EDIT"), false);
 
 		// スタート
-		self.chkbox.set_next_pos(PosTable{x:300.0,y:0.0});
+		self.chkbox.set_next_pos(PosTable{x:350.0,y:0.0});
 		self.chkbox.add(CBTitle::Start, String::from("[START]"), false);
 		self.chkbox.view_box(CBTitle::Start, false);
 		self.chkbox.set_col(CBTitle::Start, "7777FFFF", "");
@@ -69,6 +69,14 @@ impl TitleMain {
 		self.chkbox.add(CBTitle::Settings, String::from("[SETTINGS]"),false);
 		self.chkbox.set_col(CBTitle::Settings, "77FFFFFF", "");
 		self.chkbox.view_box(CBTitle::Settings, false);
+
+		// 情報
+        self.chkbox.set_base(50.0,150.0,250.0, FONT_SIZE_TITLE,
+			FONT_SIZE_TITLE * 0.7,"FFFFFFFF", "0000A0A0");
+		self.chkbox.set_next_pos(PosTable{x:470.0,y:370.0});
+		self.chkbox.add(CBTitle::Credits, String::from("[CREDITS]"), false);
+		self.chkbox.view_box(CBTitle::Credits, false);
+		self.chkbox.set_help(CBTitle::Credits, CREDITS);
 
 		// 当たり判定表示
 		self.chkbox.view_hitbox(false);
@@ -188,6 +196,11 @@ impl TitleMain {
 					true
 				}
 
+				// 情報が押された場合は何もせず真を返す
+				CBTitle::Credits => {
+					true
+				}
+
 				// 設定が押された場合はメニュー表示
 				CBTitle::Settings => {
 					self.setting.as_ref().unwrap().borrow_mut().open();
@@ -241,12 +254,10 @@ impl TitleMain {
 		//--------------------------------------------------
 		// タイトル描画
 		//--------------------------------------------------
-		dr_rect(0.0, 80.0, 700.0, 20.0, 0.0, "0000FFFF","");
-		dr_text_ex("Lets MINE SWEEPER", 20.0, 5.0, 70.0,
+		dr_rect(0.0, 80.0, 750.0, 20.0, 0.0, "0000FFFF","");
+		dr_text_ex("Let's MINE SWEEPER", 20.0, 20.0, 60.0,
 			&String::from("0000A0FF"),&String::from("FFFFFFFF"), myfont);
-		dr_text_ex("'", 150.0, 10.0, 70.0,
-			&String::from("0000A0FF"),&String::from("FFFFFFFF"), myfont);
-		dr_text_ex("v1.0", 620.0, 5.0, 20.0,
+		dr_text_ex("v1.0", 670.0, 85.0, 20.0,
 			&String::from("0000A0FF"),&String::from("FFFFFFCC"), myfont);
 
 		//--------------------------------------------------
@@ -258,11 +269,11 @@ impl TitleMain {
 		// テキストボックス描画（EDIT選択時）
 		//--------------------------------------------------
 		if self.chkbox.get_flg(CBTitle::Edit) {
-			dr_text_ex(" WIDTH", 80.0, 363.0, 20.0,
+			dr_text_ex("WIDTH", 70.0, 393.0, 20.0,
 				&String::from("000000FF"),&String::from("FFFFFFFF"), myfont);
-			dr_text_ex("HEIGHT", 80.0, 403.0, 20.0,
+			dr_text_ex("HEIGHT", 70.0, 433.0, 20.0,
 				&String::from("000000FF"),&String::from("FFFFFFFF"), myfont);
-			dr_text_ex("  BOMB", 80.0, 443.0, 20.0,
+			dr_text_ex("BOMB", 70.0, 473.0, 20.0,
 				&String::from("000000FF"),&String::from("FFFFFFFF"), myfont);
 			self.txtwidth.draw();
 			self.txtheight.draw();
@@ -278,7 +289,7 @@ impl TitleMain {
 			};
 			let rec= width * height * (par * 10.0) as i32 / 1000;
 			let text = format!("(RECOMMEND:{})", rec);
-			dr_text_ex(&text, 230.0, 443.0, 20.0,
+			dr_text_ex(&text, 250.0, 473.0, 20.0,
 				&String::from("000000FF"),&String::from("FFFFFFFF"), myfont);
 		}
 
@@ -287,5 +298,35 @@ impl TitleMain {
 		//--------------------------------------------------
 		self.setting.as_ref().unwrap().borrow().draw(myfont);
 
+		//--------------------------------------------------
+		// 情報の表示
+		//--------------------------------------------------
+		self.draw_credits(myfont);
+	}
+
+	//----------------------------------------
+	// 情報画面
+	//----------------------------------------
+	fn draw_credits(&self, myfont: &Font) {
+		if let Some((_typ, helptext)) =
+		   self.chkbox.gethelp(self.mouse_pos) {
+			// ヘルプが設定されていない場合何もしない
+			if helptext.len() == 0 {
+				return;
+			}
+			let fontsize = 20.0;
+			let offs = 10.0;
+			let left = 20.0;
+			let top = 20.0;
+			let height = helptext.lines().count() as f32 * (fontsize + offs);
+			// ヘルプ周囲を塗りつぶす
+			dr_rect(left - 5.0, top - 5.0,
+				750.0 + 10.0, height + 10.0, 0.0,
+				"000000AA", "");
+			// ヘルプテキストを表示する
+			// ヘルプテキストを表示する
+			dr_text_ex_multi(helptext, left, top,
+					fontsize, offs, "FFFFFFFF", "005500FF", myfont);
+		}
 	}
 }

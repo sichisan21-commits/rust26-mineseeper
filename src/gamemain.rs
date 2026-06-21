@@ -89,9 +89,9 @@ impl GameMain {
 	//------------------------------
 	fn mk_chkbox(&mut self) {
 		// チェックボックス作成
-        self.chkbox.set_base(30.0,200.0,110.0, 40.0, 25.0,"000000FF", "000077FF");
+        self.chkbox.set_base(10.0,200.0,110.0, 40.0, 20.0,"000000FF", "000077FF");
 		// リセットボタン作成
-		self.chkbox.add(CBGame::Reset, String::from("[ RESET  ]"), false);
+		self.chkbox.add(CBGame::Reset, String::from("[RESET]"), false);
 		self.chkbox.set_col(CBGame::Reset, "FFFF77FF","");
 		self.chkbox.view_box(CBGame::Reset, false);
 		// 設定ボタン作成
@@ -99,11 +99,11 @@ impl GameMain {
 		self.chkbox.set_col(CBGame::Settings, "77FFFFFF","");
 		self.chkbox.view_box(CBGame::Settings, false);
 		// タイトルへ戻るボタン作成
-		self.chkbox.add(CBGame::Title, String::from("[ TITLE  ]"), false);
+		self.chkbox.add(CBGame::Title, String::from("[TITLE]"), false);
 		self.chkbox.set_col(CBGame::Title, "FF7777FF","");
 		self.chkbox.view_box(CBGame::Title, false);
 		// 操作方法
-		self.chkbox.add(CBGame::HowTo, String::from("[ HOW TO ]"), false);
+		self.chkbox.add(CBGame::HowTo, String::from("[HOW TO]"), false);
 		self.chkbox.set_col(CBGame::HowTo, "FFFFFFFF","");
 		self.chkbox.view_box(CBGame::HowTo, false);
 		// 値判定表示の指定
@@ -880,44 +880,16 @@ impl GameMain {
 		let left = 20.0;
 		let top = 20.0;
 		let font_size = 20.0;
-		let offs = 30.0;
-		dr_rect(left, top, 750.0, 490.0, 3.0, "000000CC", "FF0000FF");
+		let offs = 10.0;
 
-		// 操作方法
-		let mut pos_y = top - offs;
-		pos_y += offs; dr_text_ex("＝ルール＝", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("表示されているテーブルには爆弾が埋まっています。マウスクリックで爆弾の", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("「埋まっていない」パネルをすべて開けてください。", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += 20.0;
-		pos_y += offs; dr_text_ex("表示された数字はその周囲の「爆弾の数」です。例えば「１」であった場合、", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("隣接するパネルのどこかに「１つ」だけ爆弾が存在します。", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += 20.0;
-		pos_y += offs; dr_text_ex("＝操作方法＝", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("左クリック：パネルを開ける。", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("右クリック：旗(F)を立てる、旗を外す。", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("上下キー：画面倍率変更。", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("左右キー：やり直し／元に戻す。（UNDO有効時）", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += 20.0;
-		pos_y += offs; dr_text_ex("＝特殊操作＝", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("数字と周囲の旗の数が一致している場合、数字をクリックすると周囲の旗の立っ", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += offs; dr_text_ex("ていないパネルをまとめて開くことができます。", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("777700FF"), myfont);
-		pos_y += 20.0;
-		pos_y += offs; dr_text_ex("[閉じる]", left + 20.0, top + pos_y, font_size,
-			&String::from("FFFFFFFF"), &String::from("007777FF"), myfont);
+		// 枠を描画
+		let lines = HOWTO.lines().count();
+		dr_rect(left, top, 750.0, lines as f32 * (font_size + offs) + 60.0,
+			3.0, "000000CC", "FF0000FF");
 
+		// 操作方法表示
+		dr_text_ex_multi(HOWTO, left + 20.0, top + 20.0,
+			font_size, 10.0, "FFFFFFFF", "777700FF", myfont);
 	}
 
 	//------------------------------

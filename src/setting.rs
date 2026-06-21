@@ -23,7 +23,7 @@ impl GameSettings {
 		let mut gs = GameSettings {
 			chkbox: ChkBoxMng::new(),
 			mouse_pos: PosTable {x:0.0, y:0.0},
-			menu_pos: PosTable {x:80.0, y:100.0},
+			menu_pos: PosTable {x:60.0, y:100.0},
 			help_pos: PosTable {x:30.0, y:10.0},
 		};
 
@@ -37,11 +37,11 @@ impl GameSettings {
 	// チェックボックス作成
 	//------------------------------
 	fn create_chkbox(&mut self) {
-		let left = self.menu_pos.x + 40.0;
+		let left = self.menu_pos.x + 30.0;
 		let top = self.menu_pos.y + 50.0;
 
 		// チェックボックス作成
-		self.chkbox.set_base(left,top,200.0, 35.0, 25.0,"000000FF", "FFFFFFFF");
+		self.chkbox.set_base(left,top,270.0, 40.0, 25.0,"000000FF", "FFFFFFFF");
 		// 各種設定
 		self.chkbox.add(CBSetting::CursolFlg, String::from("CURSOL FLAME"), false);
 		self.chkbox.add(CBSetting::DragOpen, String::from("DRAG OPEN"), false);
@@ -51,19 +51,19 @@ impl GameSettings {
 		self.chkbox.add(CBSetting::HideOn, String::from("HIDE BORD"), false);
 		self.chkbox.add(CBSetting::HideNumOn, String::from("HIDE NUMBER"), false);
 		// アシスト機能
-		self.chkbox.set_next_pos(PosTable{x:310.0, y:0.0});
+		self.chkbox.set_next_pos(PosTable{x:320.0, y:0.0});
 		self.chkbox.add(CBSetting::BoldFlg, String::from("USE BOLD"), false);
 		self.chkbox.add(CBSetting::Inference, String::from("USE INFERENCE"), false);
 		self.chkbox.add(CBSetting::UndoFlg, String::from("USE UNDO"), false);
 		self.chkbox.add(CBSetting::DispAll,String::from("All DISPLAY"), false);
 		// 確定（閉じる）ボタン（絶対位置）
-		self.chkbox.set_next_pos(PosTable{x:460.0, y:350.0});
+		self.chkbox.set_next_pos(PosTable{x:480.0, y:350.0});
 		self.chkbox.add(CBSetting::Close, String::from("[CLOSE]"), true);
 		self.chkbox.set_col(CBSetting::Close, "3333FFFF","");
 		self.chkbox.view_box(CBSetting::Close, false);
 		
 		// 子のチェックボックス作成
-        self.chkbox.set_base(left,top,200.0, 30.0, 20.0,"000000FF", "FFFFFFFF");
+        self.chkbox.set_base(left,top,240.0, 30.0, 20.0,"000000FF", "FFFFFFFF");
 		self.chkbox.addsub(CBSetting::BlueFlgFirst, CBSetting::UseBlueFlg,String::from("BLUEFLAG FIRST"), false);
 		self.chkbox.addsub(CBSetting::BoldSafeOn, CBSetting::BoldFlg,String::from("SAFETY ON"), false);
 		self.chkbox.addsub(CBSetting::SafeOn,CBSetting::Inference, String::from("SAFETY ON"), false);
@@ -98,24 +98,10 @@ impl GameSettings {
 		self.chkbox.set_help(CBSetting::HideLv1,"[LEVEL1]\n周囲５×５まで表示します。");
 		self.chkbox.set_help(CBSetting::HideLv2,"[LEVEL2]\n周囲３×３まで表示します。");
 		self.chkbox.set_help(CBSetting::HideLv3,"[LEVEL3]\nマウス位置以外は表示されません");
-		self.chkbox.set_help(CBSetting::HideNumOn,"[HIDE NUMBER]（アシスト使用不可）\nマウスの周囲だけ数字を表示します。※タイマー起動中は変更できません。");
+		self.chkbox.set_help(CBSetting::HideNumOn,"[HIDE NUMBER]（アシスト使用不可）\nマウスの周囲だけ数字を表示します。※タイマー起動中は変更できません");
 		self.chkbox.set_help(CBSetting::HideNumLv1,"[LEVEL1]\n周囲５×５まで表示します。");
 		self.chkbox.set_help(CBSetting::HideNumLv2,"[LEVEL2]\n周囲３×３まで表示します。");
 		self.chkbox.set_help(CBSetting::HideNumLv3,"[LEVEL3]\nマウス位置以外は表示されません");
-	}
-
-	//--------------------------------------------------
-	// メニューの表示位置設定
-	//--------------------------------------------------
-	pub fn set_menu_pos(&mut self, pos:PosTable) {
-		self.menu_pos = pos;
-	}
-
-	//--------------------------------------------------
-	// メニューの表示位置設定
-	//--------------------------------------------------
-	pub fn set_help_pos(&mut self, pos:PosTable) {
-		self.help_pos = pos;
 	}
 
 	//--------------------------------------------------
@@ -288,15 +274,14 @@ impl GameSettings {
 		//--------------------------------------------------
 		// メニューの描画
 		//--------------------------------------------------
-		// カメラをセット
 		// 設定画面表示
-		dr_rect(self.menu_pos.x,self.menu_pos.y,600.0,450.0,
+		dr_rect(self.menu_pos.x,self.menu_pos.y,700.0,450.0,
 			3.0,"00000099","FF0000FF");
 		dr_text_ex("-- SETTING --", self.menu_pos.x + 30.0, self.menu_pos.y + 10.0,
 			25.0, "A0A0FFFF", "000000FF", myfont);
 		dr_text_ex("-- GAME MODE --", self.menu_pos.x + 30.0, self.menu_pos.y + 210.0,
 			25.0, "A0A0FFFF", "000000FF", myfont);
-		dr_text_ex("-- ASSIST --", self.menu_pos.x + 340.0, self.menu_pos.y + 10.0,
+		dr_text_ex("-- ASSIST --", self.menu_pos.x + 350.0, self.menu_pos.y + 10.0,
 			25.0, "A0A0FFFF", "000000FF", myfont);
 		self.chkbox.draw(myfont);
 
@@ -311,26 +296,25 @@ impl GameSettings {
 	// 盤面の描画
 	//------------------------------
 	fn draw_help(&self, myfont:&Font) {
-		if let Some((_typ, help_lines)) =
+		if let Some((_typ, helptext)) =
 		   self.chkbox.gethelp(self.mouse_pos) {
 			// ヘルプが設定されていない場合何もしない
-			if help_lines.len() == 0 {
+			if helptext.len() == 0 {
 				return;
 			}
-			// ヘルプ周囲を塗りつぶす
+
 			let fontsize = 20.0;
-			let offs = 5.0;
+			let offs = 10.0;
 			let left = self.help_pos.x;
 			let top = self.help_pos.y;
-			let height = help_lines.len() as f32 * (fontsize + offs);
+			let height = helptext.lines().count() as f32 * (fontsize + offs);
+			// ヘルプ周囲を塗りつぶす
 			dr_rect(left - 5.0, top - 5.0,
 				750.0 + 10.0, height + 10.0, 0.0,
 				"000000AA", "");
 			// ヘルプテキストを表示する
-			for (i, line) in help_lines.iter().enumerate() {
-				dr_text_ex(line, left, top + i as f32 * (fontsize + offs),
-					fontsize, "FFFFFFFF", "005500FF", myfont);
-			}
+			dr_text_ex_multi(helptext, left, top,
+					fontsize, offs, "FFFFFFFF", "005500FF", myfont);
 		}
 	}
 

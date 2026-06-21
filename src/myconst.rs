@@ -1,5 +1,27 @@
 use macroquad::prelude::*;
 
+pub const CREDITS:&str = "Let's MINE SWEEPER v1.0
+制作:多田夕（おおたゆう）
+使用フォント:
+  IBM Plex Sans JP（© IBM Corp.）
+  SIL Open Font License 1.1";
+
+pub const HOWTO:&str = "＝ルール＝
+表示されているテーブルには爆弾が埋まっています。マウスクリックで爆弾の
+「埋まっていない」パネルをすべて開けてください。
+表示された数字はその周囲の「爆弾の数」です。例えば「１」であった場合、隣接
+するパネルのどこかに「１つ」だけ爆弾が存在します。
+
+＝操作方法＝
+左クリック：パネルを開ける。
+右クリック：旗(Ｆ)を立てる、旗を外す。
+上下キー：画面倍率変更。
+左右キー：やり直し／元に戻す。（UNDO有効時）
+
+＝特殊操作＝
+数字と周囲の旗の数が一致している場合、数字をクリックすると周囲の旗の立っ
+ていないパネルをまとめて開くことができます。";
+
 //----------------------------------------
 // ゲーム全体
 //----------------------------------------
@@ -19,7 +41,7 @@ pub const WALL_RIGHT: f32 = 20.0;               // 右の壁
 pub const WALL_BOTTOM: f32 = 20.0;              // 下の壁
 pub const SCROLL_LEFT: f32 = 150.0;				// スクロールを開始する横位置
 pub const SCROLL_TOP: f32 = 150.0;				// スクロールを開始する立て位置
-pub const FONT_SIZE_TITLE: f32 = 60.0;			// フォントサイズ（タイトル用）
+pub const FONT_SIZE_TITLE: f32 = 40.0;			// フォントサイズ（タイトル用）
 pub const FONT_SIZE: f32 = 30.0;                // フォントサイズ
 pub const FONT_SIZE_BIG: f32 = 50.0;			// フォントサイズ（大）
 
@@ -57,6 +79,7 @@ pub enum CBTitle {						// タイトル用チェックボックス群
 	Edit,									// エディット
 	Start,									// 開始
 	Settings,								// 設定
+	Credits,								// 情報
 	Quit,									// 終了
 }
 

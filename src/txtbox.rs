@@ -138,7 +138,7 @@ impl TextBox {
 		if self.focused {
 			text.push_str("|");
 		}
-		dr_text(&text, self.x + 5.0, self.y + 5.0, 28.0,
+		dr_text(&text, self.x + 10.0, self.y + 5.0, 28.0,
 			"FFFFFFFF", if self.focused {"FF000077"} else {"00000000"});
 	}
 }

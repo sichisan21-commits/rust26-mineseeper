@@ -16,7 +16,6 @@ use gamemain::GameMain;
 use titlemain::TitleMain;
 use setting::GameSettings;
 use myconst::*;
-use utils::*;
 
 // 設定画面オブジェクトをゲーム内で共有する
 use std::rc::Rc;
@@ -33,12 +32,10 @@ async fn main()
 	rand::srand(miniquad::date::now() as u64);
 
 	// フォントを読み込む
-	let myfont = load_ttf_font("assets/msgothic.ttc").await.unwrap();
+	let myfont = load_ttf_font("assets/BIZUDPGothic-Bold.ttf").await.unwrap();
 
 	// 設定画面を初期化する
 	let my_setting = Rc::new(RefCell::new(GameSettings::new()));
-	my_setting.borrow_mut().set_help_pos(PosTable{x:30.0,y:10.0});
-	my_setting.borrow_mut().set_menu_pos(PosTable{x:80.0,y:100.0});
 
 	// タイトル画面とゲームメインを初期化する
 	let mut title_data = TitleMain::new();
