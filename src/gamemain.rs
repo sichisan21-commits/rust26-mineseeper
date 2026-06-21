@@ -763,7 +763,7 @@ impl GameMain {
 			if self.stat == GameStat::Ready {
 				("[ READY ]", String::from("00FFFFFF"))
 			} else if self.stat == GameStat::Playing {
-				if  (self.tm.played - self.tm.playst < 1.0) {
+				if  self.tm.played - self.tm.playst < 1.0 {
 					("[  GO!! ]", String::from("00FFFFFF"))
 				} else {
 					("",String::from("000000FF"))
