@@ -489,11 +489,11 @@ impl InfTable {
 				// 推論テーブルがカーソルの周囲に完全一致しており（outnum == 0）
 				// 残ったマスの数と差し引き爆弾数が同じ場合は危険
 				is_update = true;
-				let remain_len = remain.len();
+//				let remain_len = remain.len();
 				for index in remain {
 					self.table[index as usize].set_autoflag(AutoSts::Danger, self.believe_flg);
 					self.table[index as usize].set_infe_flg(true);
-					if !self.table[index as usize].is_bom() {
+//					if !self.table[index as usize].is_bom() {
 //						println!("危険ではないマスを危険と判定した:{},around={},tgt={},infbom={},remainlen={}",
 //							cursol_index, around_num, index, inference.bomnum, remain_len);
 //					}
